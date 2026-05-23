@@ -43,7 +43,7 @@
         }
         .bell-btn:active { transform: scale(0.95); }
         .bell-btn:disabled { background: #555555; box-shadow: none; cursor: not-allowed; }
-        video { display: none; } /* Camera background mein hidden chalega */
+        video { display: none; } 
         .note { font-size: 11px; color: #ff4a4a; margin-top: 15px; }
     </style>
 
@@ -53,19 +53,18 @@
 <body>
 
     <div class="card">
-        <h1>Welcome to Iqbal House 🏠</h1>
-        <p>Adhi Kot, Khushab</p>
+        <h1 id="buildingTitle">Loading Portal... 🏠</h1>
+        <p id="gateSubTitle">Detecting Gate...</p>
         
         <video id="video" autoplay playsinline></video>
 
-        <button class="bell-btn" id="bellBtn" onclick="takeSnapshotAndRing()">🔔</button>
-        <p id="statusText" style="color: #ffffff; font-weight: bold; margin-top: 10px;">RING BELL</p>
+        <button class="bell-btn" id="bellBtn" onclick="takeSnapshotAndRing()" disabled>🔔</button>
+        <p id="statusText" style="color: #ffffff; font-weight: bold; margin-top: 10px;">WAITING...</p>
 
         <p class="note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
     </div>
 
     <script>
-        // Aapka provide kiya hua exact Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             authDomain: "gatepass-saas.firebaseapp.com",
@@ -75,19 +74,44 @@
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
 
-        // Firebase Initialize
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Guest ka camera automatic background mein read karna
+        // 🧠 URL Se Parameters (SaaS ID aur Gate Name) Nikalna
+        const urlParams = new URLSearchParams(window.location.search);
+        let saasAccountId = urlParams.get('id');
+        let currentGateName = urlParams.get('gate') || "Main Gate";
+
+        // Fallback: Agar koi direct open kare bina link ke, to default Iqbal House set ho jaye
+        if (!saasAccountId) {
+            saasAccountId = "DEFAULT_PREVIOUS_PRESET"; // Hum back-end handle kar rahe hain
+            document.getElementById("buildingTitle").innerText = "Welcome to Iqbal House 🏠";
+            document.getElementById("gateSubTitle").innerText = "Adhi Kot, Khushab (Gate 1)";
+            document.getElementById("bellBtn").disabled = false;
+            document.getElementById("statusText").innerText = "RING BELL";
+        } else {
+            // Firebase se is specific SaaS ID ka data uthana
+            db.collection("users").doc(saasAccountId).get().then((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById("buildingTitle").innerText = `Welcome to ${data.buildingName || "Our House"} 🏠`;
+                    document.getElementById("gateSubTitle").innerText = `${data.city || ""} (${currentGateName})`;
+                    document.getElementById("bellBtn").disabled = false;
+                    document.getElementById("statusText").innerText = "RING BELL";
+                } else {
+                    document.getElementById("buildingTitle").innerText = "Invalid SaaS Account ❌";
+                    document.getElementById("statusText").innerText = "Access Denied";
+                }
+            }).catch(err => {
+                console.error("SaaS Fetch Error:", err);
+            });
+        }
+
+        // Camera setup
         const video = document.getElementById('video');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-            .then(stream => { 
-                video.srcObject = stream; 
-            })
-            .catch(err => { 
-                console.log("Camera access denied or device has no camera."); 
-            });
+            .then(stream => { video.srcObject = stream; })
+            .catch(err => { console.log("Camera error"); });
 
         function takeSnapshotAndRing() {
             const btn = document.getElementById('bellBtn');
@@ -96,23 +120,19 @@
             btn.disabled = true;
             status.innerText = "Sending Alert...";
 
-            // Snapshot capture karne ke liye background canvas
             const canvas = document.createElement('canvas');
             canvas.width = 320;
             canvas.height = 240;
             const ctx = canvas.getContext('2d');
-            
-            // Video se current frame copy karna
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            // Image ko text base64 string mein convert karna
             const imageDataUrl = canvas.toDataURL('image/jpeg');
 
-            // Firebase Firestore ke "logs" collection mein data save karna
+            // Dynamic ID aur Dynamic Gate ke sath log save karna
             db.collection("logs").add({
-                accountId: "IQBAL_HOUSE_123", // SaaS Account Identifier
-                gate: "Gate 1",
+                accountId: saasAccountId, 
+                gate: currentGateName,
                 status: "ringing",
-                snapshot: imageDataUrl, // Asli photo text format mein ja rahi hai
+                snapshot: imageDataUrl, 
                 timestamp: new Date().toLocaleString()
             })
             .then(() => {
@@ -122,12 +142,10 @@
             })
             .catch((error) => {
                 status.style.color = "#ff4a4a";
-                status.innerText = "Failed to send alert";
+                status.innerText = "Failed";
                 btn.disabled = false;
-                console.error("Firebase Error: ", error);
             });
         }
     </script>
-
 </body>
 </html>
