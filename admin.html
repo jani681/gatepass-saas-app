@@ -69,34 +69,36 @@
 </head>
 <body>
     <div class="app-header">
-        <h1>SaaS Control Room</h1>
-        <p>Manage Infrastructure & Gate Portals</p>
+        <h1>SaaS Admin Dashboard Center ⚙️</h1>
+        <p>Manage Buildings, Gates & Generate QR Codes</p>
     </div>
     <div class="app-card">
-        <h3 style="color: var(--primary);">🏢 Setup New Account</h3>
-        <label>Building / Client Name</label>
+        <h3 style="color: var(--primary);">1. Setup New Building (Account)</h3>
+        <label>Building / Owner Name</label>
         <input type="text" id="bName" placeholder="e.g., Ali Campus or Ideal Salon">
-        <label>Location City</label>
+        <label>City</label>
         <input type="text" id="bCity" placeholder="e.g., Adhi Kot">
         <button class="app-btn" onclick="registerBuilding()">Create SaaS Account</button>
     </div>
     <div class="app-card">
-        <h3 style="color: var(--success);">🔑 Add Gate Station</h3>
-        <label>Select Target Account</label>
+        <h3 style="color: var(--success);">2. Add Gate & Generate QR Portal</h3>
+        <label>Select Account (Building)</label>
         <select id="accountSelect"><option value="">-- Loading Active Clients --</option></select>
-        <label>Gate Station Name</label>
-        <input type="text" id="gateNameInput" placeholder="e.g., Main Gate, Reception Desk">
-        <button class="app-btn app-btn-success" onclick="createGate()">Provision Gate Link</button>
+        <label>Gate Name</label>
+        <input type="text" id="gateNameInput" placeholder="e.g., Main Gate, Back Gate, Office Door">
+        <button class="app-btn app-btn-success" onclick="createGate()">Generate Gate QR Link</button>
         
         <div class="result-panel" id="qrResultBox">
-            <h4>🎉 Provisioning Matrix Generated</h4>
+            <h4>🎉 Gate Portal Generated!</h4>
+            <label>Guest Portal URL:</label>
             <div class="url-text" id="generatedUrl"></div>
+            <label>Family Dashboard URL:</label>
             <div class="url-text" id="generatedDashUrl"></div>
-            <button class="action-copy-btn" onclick="copyLinks()">📋 Copy Configuration Payload</button>
+            <button class="action-copy-btn" onclick="copyLinks()">📋 Copy Both Links</button>
         </div>
     </div>
     <div class="app-card">
-        <h3 style="color: var(--warning);">⚡ Active Gates Infrastructure</h3>
+        <h3 style="color: var(--warning);">3. Active Gates Infrastructure</h3>
         <div class="infra-list" id="gatesList"></div>
     </div>
     <script>
@@ -113,7 +115,7 @@
         function listenBuildings() {
             db.collection("users").onSnapshot((snap) => {
                 const select = document.getElementById("accountSelect");
-                select.innerHTML = '<option value="">-- Select Account --</option>';
+                select.innerHTML = '<option value="">-- Select Building --</option>';
                 snap.forEach((doc) => {
                     const data = doc.data(); const option = document.createElement("option");
                     option.value = doc.id; option.text = `${data.buildingName} (${data.city})`;
@@ -128,7 +130,7 @@
                 snap.forEach((doc) => {
                     const data = doc.data(); const div = document.createElement("div"); div.className = "gate-row";
                     const gateLink = `https://gatepass-saas-app.vercel.app/?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
-                    div.innerHTML = `<div><div class="gate-title">${data.gateName}</div><div class="gate-meta">ID: ${data.accountId.substring(0,6)}</div></div><a href="${gateLink}" target="_blank" class="portal-badge-link">Launch Node ⚡</a>`;
+                    div.innerHTML = `<div><div class="gate-title">${data.gateName}</div><div class="gate-meta">Account ID: ${data.accountId}</div></div><a href="${gateLink}" target="_blank" class="portal-badge-link">Open Portal 🔗</a>`;
                     container.appendChild(div);
                 });
             });
@@ -147,14 +149,14 @@
                 const guestUrl = `https://gatepass-saas-app.vercel.app/?id=${accountId}&gate=${encodeURIComponent(gateName)}`;
                 const dashUrl = `https://gatepass-saas-app.vercel.app/dashboard.html?id=${accountId}`;
                 document.getElementById("qrResultBox").style.display = "block";
-                document.getElementById("generatedUrl").innerText = "Guest Link: " + guestUrl;
-                document.getElementById("generatedDashUrl").innerText = "Dashboard Link: " + dashUrl;
+                document.getElementById("generatedUrl").innerText = guestUrl;
+                document.getElementById("generatedDashUrl").innerText = dashUrl;
                 document.getElementById("gateNameInput").value = "";
             });
         }
         function copyLinks() {
             const guest = document.getElementById("generatedUrl").innerText; const dash = document.getElementById("generatedDashUrl").innerText;
-            navigator.clipboard.writeText(`${guest}\n${dash}`).then(() => alert("Copied successfully!"));
+            navigator.clipboard.writeText(`Guest Link: ${guest}\nFamily Link: ${dash}`).then(() => alert("Links copied successfully!"));
         }
         listenBuildings(); listenGatesList();
     </script>
