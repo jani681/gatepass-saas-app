@@ -3,80 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GatePass - Live Monitor Feed</title>
+    <title>Resident Dashboard</title>
     <style>
-        body { background-color: #0b0f19; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
-        .app-header { text-align: center; margin: 15px 0 25px 0; width: 100%; max-width: 450px; }
-        .app-header h1 { font-size: 26px; font-weight: 800; color: #00f2fe; margin: 0; }
-        .app-header p { color: #7e8b9b; margin: 4px 0 0 0; font-size: 13px; }
-        .app-card { background: #131a2c; padding: 22px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid #1e293b; box-sizing: border-box; text-align: center; }
-        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; animation: blink 1.5s infinite; text-transform: uppercase; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .snapshot-frame { width: 100%; height: 260px; background: #0b0f19; border-radius: 16px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #1e293b; }
-        .snapshot-frame img { width: 100%; height: 100%; object-fit: cover; }
-        .meta-container { background: #0b0f19; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; text-align: left; }
-        .meta-text { color: #94a3b8; font-size: 13px; margin: 6px 0; }
-        .meta-text strong { color: #fff; }
-        .action-btn { background: #22c55e; color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
+        :root {
+            --bg: #050505;
+            --surface: #111111;
+            --accent: #00f2fe;
+            --danger: #ff4d4d;
+            --text: #ffffff;
+            --text-muted: #71717a;
+            --border: #222222;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 1rem;
+        }
+
+        .dash-container { max-width: 500px; margin: 0 auto; }
+
+        /* Header */
+        header { 
+            padding: 1rem 0; 
+            border-bottom: 1px solid var(--border); 
+            margin-bottom: 2rem; 
+        }
+        .header-title { font-size: 1.25rem; font-weight: 700; color: var(--accent); }
+
+        /* Visitor Alert Card */
+        .alert-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--danger);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .snapshot-container {
+            width: 100%;
+            height: 250px;
+            background: #000;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+            color: #333;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            font-size: 0.9rem;
+        }
+        .info-label { color: var(--text-muted); display: block; font-size: 0.7rem; }
+
+        /* Empty State */
+        .empty-dash {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        /* Action Buttons */
+        .btn-action {
+            width: 100%;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            background: var(--accent);
+            border: none;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+        }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="app-header"><h1 id="dashTitle">Iqbal House Dashboard 🏠</h1><p>Ghar Walon Ki Live Screen</p></div>
-    <div class="app-card">
-        <div id="statusBadge" class="status-badge" style="display: none;">🚨 Live Visitor</div>
-        <div class="snapshot-frame" id="snapContainer">
-            <p id="waitingText" style="color:#475569; font-style:italic; font-size:14px;">Bahar koi nahi hai. Waiting for bell... 🕒</p>
-            <img id="visitorImg" src="" style="display: none;" />
+
+<div class="dash-container">
+    <header>
+        <div class="header-title">Resident Monitor</div>
+        <div style="font-size: 0.8rem; color: var(--text-muted);">Gate System: Active</div>
+    </header>
+
+    <div id="alertArea">
+        <div class="empty-dash">
+            No active visitor alerts.
         </div>
-        <div class="meta-container">
-            <div class="meta-text"><strong>Gate:</strong> <span id="gateName">-</span></div>
-            <div class="meta-text"><strong>Time:</strong> <span id="bellTime">-</span></div>
-        </div>
-        <button class="action-btn" id="openBtn" onclick="openGate()" style="display: none;">✅ Open Gate</button>
     </div>
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
-            authDomain: "gatepass-saas.firebaseapp.com",
-            projectId: "gatepass-saas",
-            storageBucket: "gatepass-saas.firebasestorage.app",
-            messagingSenderId: "788886920648",
-            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
-        };
-        firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
-        const urlParams = new URLSearchParams(window.location.search); let saasId = urlParams.get('id') || "DEFAULT_PREVIOUS_PRESET";
+</div>
 
-        if (saasId !== "DEFAULT_PREVIOUS_PRESET") {
-            db.collection("users").doc(saasId).get().then((doc) => {
-                if (doc.exists) document.getElementById("dashTitle").innerText = `${doc.data().buildingName} Dashboard 🏠`;
-            });
-        }
-        
-        let currentActiveId = null;
-        db.collection("logs").onSnapshot((snap) => {
-            let latestAlert = null;
-            snap.forEach((doc) => {
-                const d = doc.data(); if (d.status === "ringing" && d.accountId === saasId) latestAlert = { id: doc.id, ...d };
-            });
-            if (latestAlert) {
-                currentActiveId = latestAlert.id; document.getElementById("statusBadge").style.display = "inline-block";
-                document.getElementById("waitingText").style.display = "none";
-                const img = document.getElementById("visitorImg"); img.src = latestAlert.snapshot; img.style.display = "block";
-                document.getElementById("gateName").innerText = latestAlert.gate; document.getElementById("bellTime").innerText = latestAlert.timestamp;
-                document.getElementById("openBtn").style.display = "block";
-            } else { clearDashboard(); }
-        });
+<script>
+    /**
+     * Future Logic Placeholders:
+     * 1. Initialize listener for incoming logs
+     * 2. Trigger notification/audio on new log
+     * 3. Render card dynamically
+     */
+    console.log("Dashboard UI loaded. Ready for Firestore integration.");
+</script>
 
-        function clearDashboard() {
-            currentActiveId = null; document.getElementById("statusBadge").style.display = "none"; document.getElementById("waitingText").style.display = "block";
-            document.getElementById("visitorImg").style.display = "none"; document.getElementById("gateName").innerText = "-"; document.getElementById("bellTime").innerText = "-";
-            document.getElementById("openBtn").style.display = "none";
-        }
-        function openGate() {
-            if (currentActiveId) { db.collection("logs").doc(currentActiveId).update({ status: "opened" }).then(() => { alert("Gate Authorized!"); clearDashboard(); }); }
-        }
-    </script>
 </body>
 </html>
