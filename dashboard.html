@@ -8,8 +8,9 @@
         :root { --bg: #050505; --surface: #111111; --accent: #00f2fe; --text: #ffffff; --text-muted: #71717a; }
         body { background-color: var(--bg); color: var(--text); font-family: sans-serif; padding: 20px; }
         .dash-container { max-width: 500px; margin: auto; }
-        .alert-card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 1rem; }
+        .alert-card { background: var(--surface); padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 1rem; border-left: 4px solid var(--accent); }
         .empty-dash { text-align: center; color: var(--text-muted); margin-top: 50px; }
+        .timestamp { font-size: 0.8rem; color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -24,30 +25,35 @@
         import { db } from './firebase-config.js';
         import { collection, query, where, onSnapshot, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // Yahan 'BUILDING_ID' ko replace karein ya URL parameter se dynamic banayein
-        const accountId = "REPLACE_WITH_YOUR_BUILDING_ID"; 
-        
-        const alertArea = document.getElementById('alertArea');
-        const q = query(collection(db, "logs"), where("accountId", "==", accountId), orderBy("timestamp", "desc"), limit(5));
+        // URL se Building ID catch karna
+        const urlParams = new URLSearchParams(window.location.search);
+        const accountId = urlParams.get('id');
 
-        onSnapshot(q, (snapshot) => {
-            alertArea.innerHTML = "";
-            if (snapshot.empty) {
-                alertArea.innerHTML = '<div class="empty-dash">No alerts yet.</div>';
-                return;
-            }
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                const card = document.createElement('div');
-                card.className = 'alert-card';
-                card.innerHTML = `
-                    <h3>Gate: ${data.gateName}</h3>
-                    <p>Time: ${new Date(data.timestamp).toLocaleTimeString()}</p>
-                    <span style="color:var(--accent)">Status: ${data.status}</span>
-                `;
-                alertArea.appendChild(card);
+        if (!accountId) {
+            document.getElementById('alertArea').innerHTML = '<div class="empty-dash">No Building ID provided in URL.</div>';
+        } else {
+            const alertArea = document.getElementById('alertArea');
+            const q = query(collection(db, "logs"), where("accountId", "==", accountId), orderBy("timestamp", "desc"), limit(10));
+
+            onSnapshot(q, (snapshot) => {
+                alertArea.innerHTML = "";
+                if (snapshot.empty) {
+                    alertArea.innerHTML = '<div class="empty-dash">No recent activity.</div>';
+                    return;
+                }
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const card = document.createElement('div');
+                    card.className = 'alert-card';
+                    card.innerHTML = `
+                        <h3>Gate: ${data.gateName}</h3>
+                        <p class="timestamp">Time: ${new Date(data.timestamp).toLocaleString()}</p>
+                        <span style="color:var(--accent)">Status: ${data.status}</span>
+                    `;
+                    alertArea.appendChild(card);
+                });
             });
-        });
+        }
     </script>
 </body>
 </html>
