@@ -18,35 +18,21 @@
 <body>
     <div class="container">
         <h1>Admin Dashboard</h1>
-
         <div class="card">
             <h3>Register Building</h3>
             <input type="text" id="bName" placeholder="Building Name">
             <input type="text" id="bCity" placeholder="City">
             <button onclick="registerBuilding()">Register Building</button>
         </div>
-
         <div class="card">
             <h3>Provision Gate</h3>
             <select id="bSelect"><option value="">Select Building</option></select>
-            <input type="text" id="gName" placeholder="Gate Name (e.g., Main Gate)">
+            <input type="text" id="gName" placeholder="Gate Name">
             <button onclick="createGate()">Generate Gate Node</button>
         </div>
-
-        <div class="card">
-            <h3>Buildings</h3>
-            <table id="buildingTable">
-                <thead><tr><th>Name</th><th>City</th><th>ID</th></tr></thead>
-                <tbody id="bTableBody"></tbody>
-            </table>
-        </div>
-
         <div class="card">
             <h3>Active Gates</h3>
-            <table id="gateTable">
-                <thead><tr><th>Building</th><th>Gate</th><th>Node Link</th></tr></thead>
-                <tbody id="gTableBody"></tbody>
-            </table>
+            <table><thead><tr><th>Building</th><th>Gate</th><th>Link</th></tr></thead><tbody id="gTableBody"></tbody></table>
         </div>
     </div>
 
@@ -54,45 +40,29 @@
         import { db } from './firebase-config.js';
         import { collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // READ: Fetch Buildings
         onSnapshot(query(collection(db, "users"), orderBy("timestamp", "desc")), (snap) => {
             const select = document.getElementById("bSelect");
-            const tbody = document.getElementById("bTableBody");
             select.innerHTML = '<option value="">Select Building</option>';
-            tbody.innerHTML = "";
-            snap.forEach(doc => {
-                const data = doc.data();
-                select.innerHTML += `<option value="${doc.id}">${data.buildingName}</option>`;
-                tbody.innerHTML += `<tr><td>${data.buildingName}</td><td>${data.city}</td><td>${doc.id.substring(0,8)}</td></tr>`;
-            });
+            snap.forEach(doc => { select.innerHTML += `<option value="${doc.id}">${doc.data().buildingName}</option>`; });
         });
 
-        // READ: Fetch Gates
         onSnapshot(query(collection(db, "gates"), orderBy("timestamp", "desc")), (snap) => {
             const tbody = document.getElementById("gTableBody");
             tbody.innerHTML = "";
             snap.forEach(doc => {
                 const data = doc.data();
                 const gateUrl = `${window.location.origin}/index.html?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
-                tbody.innerHTML += `<tr><td>${data.accountId}</td><td>${data.gateName}</td><td><a href="${gateUrl}" target="_blank">Open Link</a></td></tr>`;
+                tbody.innerHTML += `<tr><td>${data.accountId}</td><td>${data.gateName}</td><td><a href="${gateUrl}" target="_blank">Open</a></td></tr>`;
             });
         });
 
-        // CREATE: Building
         window.registerBuilding = async () => {
-            const name = document.getElementById("bName").value;
-            const city = document.getElementById("bCity").value;
-            if(!name || !city) return alert("Fill all fields");
-            await addDoc(collection(db, "users"), { buildingName: name, city: city, timestamp: new Date().toISOString() });
+            await addDoc(collection(db, "users"), { buildingName: document.getElementById("bName").value, city: document.getElementById("bCity").value, timestamp: new Date().toISOString() });
             alert("Building Registered");
         };
 
-        // CREATE: Gate
         window.createGate = async () => {
-            const accountId = document.getElementById("bSelect").value;
-            const gateName = document.getElementById("gName").value;
-            if(!accountId || !gateName) return alert("Select building and name gate");
-            await addDoc(collection(db, "gates"), { accountId, gateName, timestamp: new Date().toISOString() });
+            await addDoc(collection(db, "gates"), { accountId: document.getElementById("bSelect").value, gateName: document.getElementById("gName").value, timestamp: new Date().toISOString() });
             alert("Gate Provisioned");
         };
     </script>
