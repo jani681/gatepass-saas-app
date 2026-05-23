@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>GatePass - Live Monitor Feed</title>
     <style>
-        body { background-color: #0b0f19; color: #fff; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
+        body { background-color: #0b0f19; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
         .app-header { text-align: center; margin: 15px 0 25px 0; width: 100%; max-width: 450px; }
-        .app-header h1 { font-size: 26px; font-weight: 800; margin: 0; color: #00f2fe; }
-        .app-header p { color: #64748b; margin: 4px 0 0 0; font-size: 13px; font-weight: 500; }
+        .app-header h1 { font-size: 26px; font-weight: 800; color: #00f2fe; margin: 0; }
+        .app-header p { color: #64748b; margin: 4px 0 0 0; font-size: 13px; }
         .app-card { background: #131a2c; padding: 22px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid #1e293b; box-sizing: border-box; text-align: center; }
-        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; letter-spacing: 0.5px; animation: glow 1.5s infinite; }
-        @keyframes glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-        .snapshot-frame { width: 100%; height: 260px; background: #0b0f19; border-radius: 16px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #1e293b; position: relative; }
+        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; animation: blink 1.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .snapshot-frame { width: 100%; height: 260px; background: #0b0f19; border-radius: 16px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #1e293b; }
         .snapshot-frame img { width: 100%; height: 100%; object-fit: cover; }
         .meta-container { background: #0b0f19; padding: 12px; border-radius: 12px; border: 1px solid #1e293b; text-align: left; }
-        .meta-text { color: #94a3b8; font-size: 13px; margin: 6px 0; font-family: system-ui; }
+        .meta-text { color: #94a3b8; font-size: 13px; margin: 6px 0; }
         .meta-text strong { color: #fff; }
-        .action-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; box-shadow: 0 4px 14px rgba(0,230,118,0.25); }
+        .action-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="app-header"><h1 id="dashTitle">Iqbal House Dashboard 🏠</h1><p id="dashSubTitle">Ghar Walon Ki Live Screen</p></div>
+    <div class="app-header"><h1 id="dashTitle">Dashboard Monitoring 🏠</h1><p>Ghar Walon Ki Live Screen</p></div>
     <div class="app-card">
         <div id="statusBadge" class="status-badge" style="display: none;">🚨 LIVE VISITOR</div>
         <div class="snapshot-frame" id="snapContainer">
@@ -58,8 +58,7 @@
         db.collection("logs").onSnapshot((snap) => {
             let latestAlert = null;
             snap.forEach((doc) => {
-                const d = doc.data();
-                if (d.status === "ringing" && d.accountId === saasId) latestAlert = { id: doc.id, ...d };
+                const d = doc.data(); if (d.status === "ringing" && d.accountId === saasId) latestAlert = { id: doc.id, ...d };
             });
             if (latestAlert) {
                 currentActiveId = latestAlert.id; document.getElementById("statusBadge").style.display = "inline-block";
