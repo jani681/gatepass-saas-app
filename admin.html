@@ -2,292 +2,147 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GatePass - SaaS Management Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GatePass | Admin Dashboard</title>
     <style>
         :root {
-            --bg-color: #0b0f19;
-            --card-bg: #131a2c;
-            --primary: #00f2fe;
-            --primary-glow: rgba(0, 242, 254, 0.15);
-            --success: #00e676;
-            --success-glow: rgba(0, 230, 118, 0.15);
-            --warning: #ffb300;
-            --text-main: #ffffff;
-            --text-muted: #7e8b9b;
-            --input-border: #222f47;
-            --accent-red: #ef4444;
+            --bg: #0b0e14;
+            --surface: #151921;
+            --accent: #00f2fe;
+            --text: #e2e8f0;
+            --text-muted: #64748b;
+            --border: #1e293b;
         }
-        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
         body {
-            background-color: var(--bg-color); color: var(--text-main);
-            margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center;
-            -webkit-font-smoothing: antialiased; min-height: 100vh;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
         }
-        .app-header { text-align: center; margin: 15px 0 20px 0; width: 100%; max-width: 500px; }
-        .app-header h1 {
-            font-size: 26px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px;
-            background: linear-gradient(135deg, #ffffff 30%, var(--primary));
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        }
-        .app-header p { color: var(--text-muted); font-size: 13px; margin: 0; font-weight: 500; }
-        
-        /* Tab Navigation System */
-        .tab-navigation {
-            display: flex; background: var(--card-bg); padding: 6px; border-radius: 14px;
-            width: 100%; max-width: 500px; margin-bottom: 20px; border: 1px solid var(--input-border);
-        }
-        .tab-btn {
-            flex: 1; background: transparent; color: var(--text-muted); border: none;
-            padding: 10px 6px; font-size: 12px; font-weight: 700; cursor: pointer; border-radius: 10px;
-            transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.3px;
-        }
-        .tab-btn.active { background: var(--bg-color); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-        
-        /* Views */
-        .tab-view { display: none; width: 100%; max-width: 500px; }
-        .tab-view.active { display: block; animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
-        .app-card {
-            background-color: var(--card-bg); padding: 22px; border-radius: 20px;
-            width: 100%; border: 1px solid #1e293b; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4); margin-bottom: 20px;
+        /* Navbar */
+        nav {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .app-card h3 { margin: 0 0 18px 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-        label { display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .logo { font-weight: 800; color: var(--accent); font-size: 1.25rem; }
+
+        /* Container */
+        .container { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* Dashboard Grid */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        h2 { font-size: 1.1rem; margin-top: 0; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Form Elements */
+        .form-group { margin-bottom: 1rem; }
+        label { display: block; font-size: 0.85rem; margin-bottom: 0.5rem; }
         input, select {
-            width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--input-border);
-            background-color: #0b0f19; color: #fff; margin-bottom: 16px; font-size: 14px; outline: none; transition: all 0.2s;
+            width: 100%; padding: 0.75rem; background: var(--bg);
+            border: 1px solid var(--border); border-radius: 6px; color: white;
         }
-        input:focus, select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-glow); }
-        
-        .app-btn {
-            background: linear-gradient(135deg, #00bac7, #00f2fe); color: #0b0f19; border: none; padding: 14px;
-            border-radius: 12px; font-weight: 700; font-size: 14px; cursor: pointer; width: 100%; text-align: center;
-            box-shadow: 0 4px 15px rgba(0, 242, 254, 0.25); transition: all 0.2s;
+        button {
+            width: 100%; padding: 0.75rem; background: var(--accent);
+            color: var(--bg); border: none; border-radius: 6px; font-weight: 700; cursor: pointer;
         }
-        .app-btn:active { transform: scale(0.98); box-shadow: none; }
-        .app-btn-success { background: linear-gradient(135deg, #00e676, #00b0ff); color: #0b0f19; box-shadow: 0 4px 15px rgba(0, 230, 118, 0.25); }
-        
-        /* Output Box */
-        .result-panel { background: #0b0f19; padding: 16px; border-radius: 14px; margin-top: 15px; border: 1px solid var(--input-border); }
-        .result-panel h4 { margin: 0 0 12px 0; font-size: 13px; color: var(--success); display: flex; align-items: center; gap: 6px; }
-        .url-block { margin-bottom: 14px; }
-        .url-block label { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; }
-        .url-text { color: #fff; background: var(--card-bg); padding: 12px; border-radius: 10px; font-family: monospace; font-size: 11px; word-break: break-all; border: 1px solid var(--input-border); }
-        
-        .action-copy-btn {
-            background: rgba(0, 242, 254, 0.04); color: var(--primary); border: 1px solid rgba(0, 242, 254, 0.25);
-            padding: 12px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; width: 100%;
-            display: flex; align-items: center; justify-content: center; gap: 8px;
-        }
-        .action-copy-btn:hover { background: rgba(0, 242, 254, 0.1); }
 
-        /* Infrastructure Grid */
-        .infra-list { display: flex; flex-direction: column; gap: 12px; }
-        .gate-row {
-            background: #0b0f19; padding: 14px 16px; border-radius: 14px;
-            display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--input-border);
-        }
-        .gate-title { font-weight: 700; font-size: 14px; color: #fff; margin-bottom: 3px; }
-        .gate-meta { font-size: 11px; color: var(--text-muted); font-family: monospace; }
-        .portal-badge-link {
-            color: var(--primary); font-size: 11px; text-decoration: none; font-weight: 700;
-            background: var(--primary-glow); padding: 8px 14px; border-radius: 20px; border: 1px solid rgba(0, 242, 254, 0.2);
-            transition: all 0.2s; text-transform: uppercase; letter-spacing: 0.3px;
-        }
-        .portal-badge-link:hover { background: var(--primary); color: #0b0f19; }
-        
-        .empty-text { color: var(--text-muted); font-size: 13px; text-align: center; font-style: italic; padding: 20px 0; }
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        th { text-align: left; color: var(--text-muted); font-size: 0.8rem; padding: 0.5rem; }
+        td { padding: 1rem 0.5rem; border-top: 1px solid var(--border); }
+
+        /* States */
+        .empty-state { text-align: center; color: var(--text-muted); padding: 2rem; }
+        .loading { color: var(--accent); }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
-    <div class="app-header">
-        <h1>SaaS Admin Control Center ⚙️</h1>
-        <p>Provision Infrastructure, Accounts & Route Terminals</p>
-    </div>
+<nav>
+    <div class="logo">GATEPASS.SAAS</div>
+    <div>Admin Panel</div>
+</nav>
 
-    <div class="tab-navigation">
-        <button class="tab-btn active" onclick="switchTab('account-tab')">🏢 Accounts</button>
-        <button class="tab-btn" onclick="switchTab('gate-tab')">🎛️ QR System</button>
-        <button class="tab-btn" onclick="switchTab('infra-tab')">📊 Active Nodes</button>
-    </div>
-
-    <div id="account-tab" class="tab-view active">
-        <div class="app-card">
-            <h3 style="color: var(--primary);">Create SaaS Client Account</h3>
-            <label>Building / Tenant Name</label>
-            <input type="text" id="bName" placeholder="e.g., Iqbal House, Ali Campus, Ideal Salon">
-            <label>Location / City</label>
-            <input type="text" id="bCity" placeholder="e.g., Adhi Kot, Khushab">
-            <button class="app-btn" onclick="registerBuilding()">Provision Client Account</button>
-        </div>
-    </div>
-
-    <div id="gate-tab" class="tab-view">
-        <div class="app-card">
-            <h3 style="color: var(--success);">Generate Terminal Gate Routing</h3>
-            <label>Select Tenant Profile</label>
-            <select id="accountSelect"><option value="">-- Fetching Live Clients --</option></select>
-            <label>Gate Identifier Label</label>
-            <input type="text" id="gateNameInput" placeholder="e.g., Main Gate, Reception Desk, Front Door">
-            <button class="app-btn app-btn-success" onclick="createGate()">Deploy Terminal & Generate Matrix</button>
-            
-            <div class="result-panel" id="qrResultBox" style="display: none;">
-                <h4>🎉 Routing Node Configured Successfully!</h4>
-                <div class="url-block">
-                    <label>Visitor Gate Ring Bell Terminal URL:</label>
-                    <div class="url-text" id="generatedUrl"></div>
-                </div>
-                <div class="url-block">
-                    <label>Resident Family Dashboard Control URL:</label>
-                    <div class="url-text" id="generatedDashUrl"></div>
-                </div>
-                <button class="action-copy-btn" onclick="copyLinks()">📋 Sync & Copy Both Web Links</button>
+<div class="container">
+    <div class="grid">
+        <div class="card">
+            <h2>Building Registration</h2>
+            <div class="form-group">
+                <label>Building Name</label>
+                <input type="text" id="bName" placeholder="e.g. Apex Towers">
             </div>
-        </div>
-    </div>
-
-    <div id="infra-tab" class="tab-view">
-        <div class="app-card">
-            <h3 style="color: var(--warning);">Live Terminals Infrastructure Map</h3>
-            <div class="infra-list" id="gatesList">
-                <div class="empty-text">Listening to remote node trees...</div>
+            <div class="form-group">
+                <label>City</label>
+                <input type="text" id="bCity" placeholder="e.g. New York">
             </div>
+            <button onclick="registerBuilding()">Register Building</button>
+        </div>
+
+        <div class="card">
+            <h2>Gate Provisioning</h2>
+            <div class="form-group">
+                <label>Select Building</label>
+                <select id="bSelect"><option>Loading buildings...</option></select>
+            </div>
+            <div class="form-group">
+                <label>Gate Name</label>
+                <input type="text" id="gName" placeholder="e.g. Main Entrance">
+            </div>
+            <button onclick="createGate()">Generate Gate Node</button>
         </div>
     </div>
 
-    <script>
-        // Real-time Production DB Sync Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
-            authDomain: "gatepass-saas.firebaseapp.com",
-            projectId: "gatepass-saas",
-            storageBucket: "gatepass-saas.firebasestorage.app",
-            messagingSenderId: "788886920648",
-            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+    <div class="card" style="margin-top: 1.5rem;">
+        <h2>Deployed Infrastructure</h2>
+        <table id="gateTable">
+            <thead>
+                <tr>
+                    <th>Building</th>
+                    <th>Gate Name</th>
+                    <th>Node ID</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                </tbody>
+        </table>
+        <div id="emptyState" class="empty-state">No gates provisioned yet.</div>
+    </div>
+</div>
 
-        // View Matrix Switcher
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-view').forEach(view => view.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
+<script>
+    // Placeholder logic for future integration
+    function registerBuilding() {
+        console.log("Registering building...");
+        // Firebase logic will go here
+    }
 
-        // Live Listener: Fetch Tenant Accounts for Dropdown Selection
-        function listenBuildings() {
-            db.collection("users").orderBy("timestamp", "desc").onSnapshot((snap) => {
-                const select = document.getElementById("accountSelect");
-                select.innerHTML = '<option value="">-- Select Active Client Profile --</option>';
-                if(snap.empty) {
-                    select.innerHTML = '<option value="">No profiles found. Create one first.</option>';
-                    return;
-                }
-                snap.forEach((doc) => {
-                    const data = doc.data();
-                    const option = document.createElement("option");
-                    option.value = doc.id;
-                    option.text = `${data.buildingName} (${data.city})`;
-                    select.appendChild(option);
-                });
-            }, error => console.error("Account stream disrupted:", error));
-        }
+    function createGate() {
+        console.log("Provisioning gate...");
+        // Firebase logic will go here
+    }
 
-        // Live Listener: Stream Active Deployed Gate Links
-        function listenGatesList() {
-            db.collection("gates").orderBy("timestamp", "desc").onSnapshot((snap) => {
-                const container = document.getElementById("gatesList");
-                container.innerHTML = "";
-                if (snap.empty) {
-                    container.innerHTML = "<div class='empty-text'>No operational gate nodes provisioned yet.</div>";
-                    return;
-                }
-                snap.forEach((doc) => {
-                    const data = doc.data();
-                    const div = document.createElement("div");
-                    div.className = "gate-row";
-                    const guestUrl = `${window.location.origin}/index.html?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
-                    
-                    div.innerHTML = `
-                        <div>
-                            <div class="gate-title">${data.gateName}</div>
-                            <div class="gate-meta">ID: ${doc.id.substring(0,8)}... | Owner ref: ${data.accountId.substring(0,6)}...</div>
-                        </div>
-                        <a href="${guestUrl}" target="_blank" class="portal-badge-link">Open Gate 🔗</a>
-                    `;
-                    container.appendChild(div);
-                });
-            }, error => console.error("Infrastructure stream disrupted:", error));
-        }
+    // Initialize UI states
+    window.onload = () => {
+        console.log("Dashboard initialized.");
+        // Check for existing data and update DOM
+    };
+</script>
 
-        // Action: Register Building Profile
-        function registerBuilding() {
-            const name = document.getElementById("bName").value.trim();
-            const city = document.getElementById("bCity").value.trim();
-            if (!name || !city) return alert("Validation Failed: All profile allocation variables required!");
-            
-            db.collection("users").add({
-                buildingName: name,
-                city: city,
-                timestamp: new Date().toISOString()
-            })
-            .then(() => {
-                alert("Success: Account created successfully! Proceeding to QR System tab.");
-                document.getElementById("bName").value = "";
-                document.getElementById("bCity").value = "";
-                // Automatically shift to let them generate gate link
-                switchTab('gate-tab');
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                document.querySelectorAll('.tab-btn')[0].classList.remove('active');
-            })
-            .catch(err => alert("Write Error: " + err.message));
-        }
-
-        // Action: Provision Gate Path Routing Structure
-        function createGate() {
-            const accountId = document.getElementById("accountSelect").value;
-            const gateName = document.getElementById("gateNameInput").value.trim();
-            if (!accountId || !gateName) return alert("Validation Failed: Select context node and label station!");
-            
-            db.collection("gates").add({
-                accountId: accountId,
-                gateName: gateName,
-                timestamp: new Date().toISOString()
-            })
-            .then(() => {
-                const baseUrl = window.location.origin;
-                const guestUrl = `${baseUrl}/index.html?id=${accountId}&gate=${encodeURIComponent(gateName)}`;
-                const dashUrl = `${baseUrl}/dashboard.html?id=${accountId}`;
-                
-                document.getElementById("qrResultBox").style.display = "block";
-                document.getElementById("generatedUrl").innerText = guestUrl;
-                document.getElementById("generatedDashUrl").innerText = dashUrl;
-                document.getElementById("gateNameInput").value = "";
-            })
-            .catch(err => alert("Write Error: " + err.message));
-        }
-
-        // Action: Copy Script
-        function copyLinks() {
-            const guest = document.getElementById("generatedUrl").innerText;
-            const dash = document.getElementById("generatedDashUrl").innerText;
-            const textToCopy = `Visitor Link: ${guest}\nResident Dashboard Link: ${dash}`;
-            
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert("SaaS configuration payload synchronized to clipboard!");
-            }).catch(err => alert("Clipboard Access Blocked: Please manually copy the links."));
-        }
-
-        // Init Triggers
-        listenBuildings();
-        listenGatesList();
-    </script>
 </body>
 </html>
