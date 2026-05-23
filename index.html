@@ -5,45 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GatePass - Guest Portal</title>
     <style>
-        body {
-            background-color: #121212;
-            color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
+        body { 
+            background-color: #121212; 
+            color: #ffffff; 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
         }
-        .card {
-            background-color: #1e1e1e;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            width: 85%;
-            max-width: 400px;
+        .card { 
+            background-color: #1e1e1e; 
+            padding: 30px; 
+            border-radius: 15px; 
+            text-align: center; 
+            width: 85%; 
+            max-width: 400px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
         }
         h1 { color: #00adb5; font-size: 24px; margin-bottom: 5px; }
         p { color: #aaaaaa; font-size: 14px; margin-top: 0; }
-        .bell-btn {
-            background: linear-gradient(135deg, #00adb5, #007bb5);
-            color: white;
-            border: none;
-            padding: 20px;
-            border-radius: 50%;
-            font-size: 40px;
-            cursor: pointer;
-            width: 100px;
-            height: 100px;
-            margin: 30px 0;
-            box-shadow: 0 0 20px rgba(0, 173, 181, 0.4);
+        .bell-btn { 
+            background: linear-gradient(135deg, #00adb5, #007bb5); 
+            color: white; 
+            border: none; 
+            padding: 20px; 
+            border-radius: 50%; 
+            font-size: 40px; 
+            cursor: pointer; 
+            width: 100px; 
+            height: 100px; 
+            margin: 20px 0; 
+            box-shadow: 0 0 20px rgba(0, 173, 181, 0.4); 
             transition: transform 0.2s;
         }
         .bell-btn:active { transform: scale(0.95); }
-        .note { font-size: 11px; color: #ff4a4a; }
+        .bell-btn:disabled { background: #555555; box-shadow: none; cursor: not-allowed; }
+        video { display: none; } /* Camera background mein hidden chalega */
+        .note { font-size: 11px; color: #ff4a4a; margin-top: 15px; }
     </style>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
 
@@ -51,17 +56,76 @@
         <h1>Welcome to Iqbal House 🏠</h1>
         <p>Adhi Kot, Khushab</p>
         
-        <!-- Ring Bell Button -->
-        <button class="bell-btn" onclick="ringBell()">🔔</button>
-        <p style="color: #ffffff; font-weight: bold;">RING BELL</p>
+        <video id="video" autoplay playsinline></video>
+
+        <button class="bell-btn" id="bellBtn" onclick="takeSnapshotAndRing()">🔔</button>
+        <p id="statusText" style="color: #ffffff; font-weight: bold; margin-top: 10px;">RING BELL</p>
 
         <p class="note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
     </div>
 
     <script>
-        function ringBell() {
-            alert("Bell Sent! Please wait for response...");
-            // Aglay steps mein yahan Firebase ka camera snapshot logic fit karenge.
+        // Aapka provide kiya hua exact Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+            authDomain: "gatepass-saas.firebaseapp.com",
+            projectId: "gatepass-saas",
+            storageBucket: "gatepass-saas.firebasestorage.app",
+            messagingSenderId: "788886920648",
+            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+        };
+
+        // Firebase Initialize
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Guest ka camera automatic background mein read karna
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            .then(stream => { 
+                video.srcObject = stream; 
+            })
+            .catch(err => { 
+                console.log("Camera access denied or device has no camera."); 
+            });
+
+        function takeSnapshotAndRing() {
+            const btn = document.getElementById('bellBtn');
+            const status = document.getElementById('statusText');
+            
+            btn.disabled = true;
+            status.innerText = "Sending Alert...";
+
+            // Snapshot capture karne ke liye background canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+            
+            // Video se current frame copy karna
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            // Image ko text base64 string mein convert karna
+            const imageDataUrl = canvas.toDataURL('image/jpeg');
+
+            // Firebase Firestore ke "logs" collection mein data save karna
+            db.collection("logs").add({
+                accountId: "IQBAL_HOUSE_123", // SaaS Account Identifier
+                gate: "Gate 1",
+                status: "ringing",
+                snapshot: imageDataUrl, // Asli photo text format mein ja rahi hai
+                timestamp: new Date().toLocaleString()
+            })
+            .then(() => {
+                status.style.color = "#00adb5";
+                status.innerText = "Bell Sent Successfully!";
+                alert("Ghar walon ko bell bhej di gayi hai!");
+            })
+            .catch((error) => {
+                status.style.color = "#ff4a4a";
+                status.innerText = "Failed to send alert";
+                btn.disabled = false;
+                console.error("Firebase Error: ", error);
+            });
         }
     </script>
 
