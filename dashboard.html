@@ -8,24 +8,24 @@
         body { background-color: #0b0f19; color: #fff; font-family: -apple-system, sans-serif; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
         .app-header { text-align: center; margin: 15px 0 25px 0; width: 100%; max-width: 450px; }
         .app-header h1 { font-size: 26px; font-weight: 800; color: #00f2fe; margin: 0; }
-        .app-header p { color: #64748b; margin: 4px 0 0 0; font-size: 13px; }
+        .app-header p { color: #7e8b9b; margin: 4px 0 0 0; font-size: 13px; }
         .app-card { background: #131a2c; padding: 22px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid #1e293b; box-sizing: border-box; text-align: center; }
-        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; animation: blink 1.5s infinite; }
+        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; animation: blink 1.5s infinite; text-transform: uppercase; }
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
         .snapshot-frame { width: 100%; height: 260px; background: #0b0f19; border-radius: 16px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #1e293b; }
         .snapshot-frame img { width: 100%; height: 100%; object-fit: cover; }
-        .meta-container { background: #0b0f19; padding: 12px; border-radius: 12px; border: 1px solid #1e293b; text-align: left; }
+        .meta-container { background: #0b0f19; padding: 14px; border-radius: 12px; border: 1px solid #1e293b; text-align: left; }
         .meta-text { color: #94a3b8; font-size: 13px; margin: 6px 0; }
         .meta-text strong { color: #fff; }
-        .action-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; }
+        .action-btn { background: #22c55e; color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; text-transform: uppercase; letter-spacing: 0.5px; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="app-header"><h1 id="dashTitle">Dashboard Monitoring 🏠</h1><p>Ghar Walon Ki Live Screen</p></div>
+    <div class="app-header"><h1 id="dashTitle">Iqbal House Dashboard 🏠</h1><p>Ghar Walon Ki Live Screen</p></div>
     <div class="app-card">
-        <div id="statusBadge" class="status-badge" style="display: none;">🚨 LIVE VISITOR</div>
+        <div id="statusBadge" class="status-badge" style="display: none;">🚨 Live Visitor</div>
         <div class="snapshot-frame" id="snapContainer">
             <p id="waitingText" style="color:#475569; font-style:italic; font-size:14px;">Bahar koi nahi hai. Waiting for bell... 🕒</p>
             <img id="visitorImg" src="" style="display: none;" />
@@ -34,7 +34,7 @@
             <div class="meta-text"><strong>Gate:</strong> <span id="gateName">-</span></div>
             <div class="meta-text"><strong>Time:</strong> <span id="bellTime">-</span></div>
         </div>
-        <button class="action-btn" id="openBtn" onclick="openGate()" style="display: none;">✅ OPEN GATE</button>
+        <button class="action-btn" id="openBtn" onclick="openGate()" style="display: none;">✅ Open Gate</button>
     </div>
     <script>
         const firebaseConfig = {
