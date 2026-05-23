@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GatePass - Super Admin Panel</title>
+    <style>
+        body { background-color: #121212; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        h1 { color: #00adb5; }
+        .card { background-color: #1e1e1e; padding: 20px; border-radius: 15px; width: 90%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 20px; }
+        label { display: block; margin: 10px 0 5px; color: #aaaaaa; font-size: 14px; }
+        input, select { width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #333; background-color: #252525; color: white; box-sizing: border-box; }
+        .btn { background: #00adb5; color: white; border: none; padding: 12px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
+        .btn:active { transform: scale(0.98); }
+        .qr-box { background: white; color: black; padding: 15px; border-radius: 10px; margin-top: 15px; text-align: center; display: none; }
+        .qr-box p { margin: 5px 0; font-size: 12px; word-break: break-all; }
+        .gate-list-item { background: #252525; padding: 10px; border-radius: 5px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00adb5; }
+        .link-text { color: #00adb5; font-size: 12px; text-decoration: none; }
+    </style>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+</head>
+<body>
+
+    <h1>SaaS Admin Dashboard Center ⚙️</h1>
+    <p style="color: #888;">Manage Buildings, Gates & Generate QR Codes</p>
+
+    <div class="card">
+        <h3>1. Setup New Building (Account)</h3>
+        <label>Building / Owner Name</label>
+        <input type="text" id="bName" placeholder="e.g., Iqbal House or Ali Campus">
+        
+        <label>City</label>
+        <input type="text" id="bCity" placeholder="e.g., Adhi Kot">
+        
+        <button class="btn" onclick="registerBuilding()">Create SaaS Account</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Add Gate & Generate QR Portal</h3>
+        <label>Select Account</label>
+        <select id="accountSelect"><option value="">-- Select Building --</option></select>
+        
+        <label>Gate Name</label>
+        <input type="text" id="gateNameInput" placeholder="e.g., Main Gate, Back Gate, Office Door">
+        
+        <button class="btn" style="background: #28a745;" onclick="createGate()">Generate Gate QR Link</button>
+
+        <div class="qr-box" id="qrResultBox">
+            <h4 style="color: #28a745; margin: 0 0 10px 0;">🎉 Gate Portal Generated!</h4>
+            <p><strong>Copy this URL to Link with QR Code:</strong></p>
+            <p id="generatedUrl" style="font-weight: bold; color: #333; background: #eee; padding: 8px; border-radius: 5px;"></p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>3. Active Gates Infrastructure</h3>
+        <div id="gatesList"><p style="color:#666; font-style:italic;">No active gates loaded.</p></div>
+    </div>
+
+    <script>
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+            authDomain: "gatepass-saas.firebaseapp.com",
+            projectId: "gatepass-saas",
+            storageBucket: "gatepass-saas.firebasestorage.app",
+            messagingSenderId: "788886920648",
+            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Page load hote hi buildings data dropdown mein load karna
+        function loadBuildings() {
+            const select = document.getElementById("accountSelect");
+            select.innerHTML = '<option value="">-- Select Building --</option>';
+            
+            db.collection("users").get().then((snapshot) => {
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    let option = document.createElement("option");
+                    option.value = doc.id; // Firebase Document ID hamari SaaS ID hogi
+                    option.text = `${data.buildingName || data.fullName} (${data.city})`;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        // Live Gates Ki List Load Karna
+        function loadGatesList() {
+            const container = document.getElementById("gatesList");
+            container.innerHTML = "";
+            
+            db.collection("gates").get().then((snapshot) => {
+                if(snapshot.empty) {
+                    container.innerHTML = "<p style='color:#666; font-style:italic;'>No active gates found.</p>";
+                    return;
+                }
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const div = document.createElement("div");
+                    div.className = "gate-list-item";
+                    
+                    // Dynamic Web Link for each specific gate
+                    const gateLink = `https://gatepass-saas-app.vercel.app/?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
+                    
+                    div.innerHTML = `
+                        <div>
+                            <strong style="color:#00adb5;">${data.gateName}</strong><br>
+                            <span style="font-size:11px; color:#aaa;">ID: ${data.accountId}</span>
+                        </div>
+                        <a href="${gateLink}" target="_blank" class="link-text">Open Portal 🔗</a>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        // 1. Nayi Building Register Karna
+        function registerBuilding() {
+            const name = document.getElementById("bName").value;
+            const city = document.getElementById("bCity").value;
+            if(!name || !city) return alert("Please fill all fields");
+
+            db.collection("users").add({
+                buildingName: name,
+                city: city,
+                timestamp: new Date().toLocaleString()
+            }).then(() => {
+                alert("SaaS Building Account Created!");
+                document.getElementById("bName").value = "";
+                document.getElementById("bCity").value = "";
+                loadBuildings(); // Dropdown refresh
+            });
+        }
+
+        // 2. Naya Gate Add Karna aur Dynamic Link Generate Karna
+        function createGate() {
+            const accountId = document.getElementById("accountSelect").value;
+            const gateName = document.getElementById("gateNameInput").value;
+            if(!accountId || !gateName) return alert("Select building and enter gate name");
+
+            db.collection("gates").add({
+                accountId: accountId,
+                gateName: gateName
+            }).then(() => {
+                const finalUrl = `https://gatepass-saas-app.vercel.app/?id=${accountId}&gate=${encodeURIComponent(gateName)}`;
+                
+                document.getElementById("qrResultBox").style.display = "block";
+                document.getElementById("generatedUrl").innerText = finalUrl;
+                
+                document.getElementById("gateNameInput").value = "";
+                loadGatesList(); // List refresh
+            });
+        }
+
+        // Initial Boot
+        loadBuildings();
+        loadGatesList();
+    </script>
+</body>
+</html>
