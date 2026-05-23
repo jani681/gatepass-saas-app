@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GatePass - Family Dashboard</title>
+    <title>GatePass - Live Dashboard</title>
     <style>
         body { 
             background-color: #121212; 
@@ -81,8 +81,8 @@
 <body>
 
     <div class="header">
-        <h1>Iqbal House Dashboard 🏠</h1>
-        <p>Ghar Walon Ki Live Screen</p>
+        <h1 id="dashTitle">Loading Dashboard... 🏠</h1>
+        <p id="dashSubTitle">Connecting to Real-time Feed</p>
     </div>
 
     <div class="dashboard-card" id="alertCard">
@@ -102,7 +102,6 @@
     </div>
 
     <script>
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             authDomain: "gatepass-saas.firebaseapp.com",
@@ -111,47 +110,67 @@
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
-
-        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // 🧠 URL Se Parameter (SaaS ID) Nikalna
+        const urlParams = new URLSearchParams(window.location.search);
+        let saasId = urlParams.get('id');
+
+        // Fallback agar koi baghair ID ke dashboard khole
+        if (!saasId) {
+            saasId = "DEFAULT_PREVIOUS_PRESET";
+            document.getElementById("dashTitle").innerText = "Iqbal House Dashboard 🏠";
+            document.getElementById("dashSubTitle").innerText = "Ghar Walon Ki Live Screen";
+            listenToLogs(saasId);
+        } else {
+            // Firebase se is specific SaaS ID ka Title load karna
+            db.collection("users").doc(saasId).get().then((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    document.getElementById("dashTitle").innerText = `${data.buildingName || "Home"} Dashboard 🏠`;
+                    document.getElementById("dashSubTitle").innerText = `${data.city || "Live Screen"}`;
+                    listenToLogs(saasId);
+                } else {
+                    document.getElementById("dashTitle").innerText = "Invalid Dashboard ID ❌";
+                }
+            });
+        }
+
         let currentActiveDocId = null;
 
-        // 🧠 Simplified Real-Time Listener: Bina kisi indexing error ke logs read karega
-        db.collection("logs")
-          .onSnapshot((snapshot) => {
-              let activeAlert = null;
+        // 🔥 Sirf is specific account ki real-time monitoring karna
+        function listenToLogs(accountId) {
+            db.collection("logs")
+              .onSnapshot((snapshot) => {
+                  let activeAlert = null;
 
-              // Saare documents check karke active ringing bell nikalna
-              snapshot.forEach((doc) => {
-                  const data = doc.data();
-                  if (data.status === "ringing") {
-                      activeAlert = { id: doc.id, ...data };
+                  snapshot.forEach((doc) => {
+                      const data = doc.data();
+                      // Filter: Status 'ringing' ho AUR accountId match kare
+                      if (data.status === "ringing" && data.accountId === accountId) {
+                          activeAlert = { id: doc.id, ...data };
+                      }
+                  });
+
+                  if (activeAlert) {
+                      currentActiveDocId = activeAlert.id;
+
+                      document.getElementById("statusBadge").style.display = "inline-block";
+                      document.getElementById("waitingText").style.display = "none";
+                      
+                      const imgElement = document.getElementById("visitorImg");
+                      imgElement.src = activeAlert.snapshot;
+                      imgElement.style.display = "block";
+
+                      document.getElementById("gateName").innerText = activeAlert.gate;
+                      document.getElementById("bellTime").innerText = activeAlert.timestamp;
+                      document.getElementById("openBtn").style.display = "block";
+                  } else {
+                      resetDashboard();
                   }
               });
-
-              if (activeAlert) {
-                  currentActiveDocId = activeAlert.id;
-
-                  // Dashboard UI ko update karna
-                  document.getElementById("statusBadge").style.display = "inline-block";
-                  document.getElementById("waitingText").style.display = "none";
-                  
-                  const imgElement = document.getElementById("visitorImg");
-                  imgElement.src = activeAlert.snapshot;
-                  imgElement.style.display = "block";
-
-                  document.getElementById("gateName").innerText = activeAlert.gate;
-                  document.getElementById("bellTime").innerText = activeAlert.timestamp;
-                  document.getElementById("openBtn").style.display = "block";
-              } else {
-                  // Agar koi active ringing bell nahi hai to reset kar do
-                  resetDashboard();
-              }
-          }, (error) => {
-              console.error("Snapshot error: ", error);
-          });
+        }
 
         function resetDashboard() {
             currentActiveDocId = null;
@@ -165,16 +184,11 @@
 
         function openGate() {
             if (currentActiveDocId) {
-                // Database mein status ko updated kar dena taake dashboard normal ho jaye
                 db.collection("logs").doc(currentActiveDocId).update({
                     status: "opened"
-                })
-                .then(() => {
-                    alert("Gate opened! Alert cleared.");
+                }).then(() => {
+                    alert("Gate cleared!");
                     resetDashboard();
-                })
-                .catch((error) => {
-                    console.error("Error updating status: ", error);
                 });
             }
         }
