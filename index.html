@@ -16,19 +16,15 @@
         h1 { color: #00f2fe; font-size: 24px; font-weight: 800; margin: 0 0 6px 0; }
         p { color: #9ca3af; font-size: 14px; margin: 0 0 25px 0; }
         .bell-container {
-            width: 140px; height: 140px; background: rgba(0, 242, 254, 0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 25px auto;
-            border: 2px dashed rgba(0, 242, 254, 0.3); box-shadow: 0 0 20px rgba(0, 242, 254, 0.1);
+            width: 150px; height: 150px; background: radial-gradient(circle, #4facfe 0%, #00f2fe 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 25px auto;
+            box-shadow: 0 0 30px rgba(0, 242, 254, 0.4); outline: none; border: none; cursor: pointer; transition: transform 0.1s;
         }
-        .bell-btn { 
-            background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none;
-            border-radius: 50%; font-size: 44px; cursor: pointer; width: 110px; height: 110px; 
-            box-shadow: 0 8px 24px rgba(0, 242, 254, 0.4); display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.1s;
-        }
-        .bell-btn:active { transform: scale(0.95); }
-        .bell-btn:disabled { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
+        .bell-container:active { transform: scale(0.95); }
+        .bell-btn { background: transparent; color: #fff; border: none; font-size: 52px; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; }
+        .bell-container:disabled { background: #334155; box-shadow: none; cursor: not-allowed; }
         video { display: none; } 
-        #statusText { font-size: 14px; font-weight: 700; text-transform: uppercase; color: #00f2fe; margin-top: 15px; letter-spacing: 0.5px; }
-        .warning-note { font-size: 11px; color: #ef4444; margin-top: 25px; background: rgba(239, 68, 68, 0.05); padding: 12px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15); }
+        #statusText { font-size: 15px; font-weight: 700; text-transform: uppercase; color: #ffffff; margin-top: 15px; letter-spacing: 0.5px; }
+        .warning-note { font-size: 11px; color: #ef4444; margin-top: 25px; padding: 0 10px; line-height: 1.4; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -38,10 +34,12 @@
         <h1 id="buildingTitle">Connecting...</h1>
         <p id="gateSubTitle">Securing gate console sync</p>
         <video id="video" autoplay playsinline></video>
-        <div class="bell-container">
-            <button class="bell-btn" id="bellBtn" onclick="triggerSnapshotRing()" disabled>🔔</button>
-        </div>
-        <div id="statusText">INITIALIZING...</div>
+        
+        <button class="bell-container" id="bellBtn" onclick="triggerSnapshotRing()" disabled>
+            <div class="bell-btn">🔔</div>
+        </button>
+        
+        <div id="statusText">RING BELL</div>
         <p class="warning-note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
     </div>
     <script>
@@ -60,13 +58,13 @@
         if (!accountId) {
             document.getElementById("buildingTitle").innerText = "Welcome to Iqbal House 🏠";
             document.getElementById("gateSubTitle").innerText = "Adhi Kot, Khushab";
-            activateConsole("RING BELL");
+            activateConsole();
         } else {
             db.collection("users").doc(accountId).get().then((doc) => {
                 if (doc.exists) {
                     document.getElementById("buildingTitle").innerText = `Welcome to ${doc.data().buildingName} 🏠`;
                     document.getElementById("gateSubTitle").innerText = `${doc.data().city} (${gateName})`;
-                    activateConsole("RING BELL");
+                    activateConsole();
                 } else {
                     document.getElementById("buildingTitle").innerText = "Terminal Error ❌";
                     document.getElementById("statusText").innerText = "MISMATCH LINK";
@@ -74,14 +72,13 @@
             });
         }
 
-        function activateConsole(msg) {
+        function activateConsole() {
             document.getElementById("bellBtn").disabled = false;
-            document.getElementById("statusText").innerText = msg;
         }
 
         const video = document.getElementById('video');
         navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-            .then(stream => { video.srcObject = stream; }).catch(() => console.log("Camera handling initialized."));
+            .then(stream => { video.srcObject = stream; }).catch(() => console.log("Camera access initialized."));
 
         function triggerSnapshotRing() {
             const btn = document.getElementById('bellBtn'); const txt = document.getElementById('statusText');
@@ -94,7 +91,7 @@
             db.collection("logs").add({
                 accountId: accountId || "DEFAULT_PREVIOUS_PRESET", gate: gateName, status: "ringing", snapshot: snapshotUrl, timestamp: new Date().toLocaleString()
             }).then(() => {
-                txt.style.color = "#00e676"; txt.innerText = "Bell Sent Successfully!";
+                txt.style.color = "#00e676"; txt.innerText = "BELL SENT SUCCESSFULLY!";
             }).catch(() => { txt.innerText = "RETRY"; btn.disabled = false; });
         }
     </script>
