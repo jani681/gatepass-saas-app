@@ -5,28 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Gate Terminal</title>
     <style>
-        :root { --bg: #050505; --accent: #00f2fe; }
-        body { background-color: var(--bg); color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .terminal { text-align: center; width: 90%; max-width: 400px; }
-        .ring-btn { width: 120px; height: 120px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; font-size: 2rem; }
+        :root { --bg: #050505; --accent: #00f2fe; --text: #ffffff; }
+        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .terminal { text-align: center; width: 90%; max-width: 400px; padding: 2rem; background: #111; border-radius: 20px; }
+        .ring-btn { width: 120px; height: 120px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: #000; }
+        .error { color: #ff4d4d; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="terminal">
-        <h1>Visitor Terminal</h1>
+        <h2 id="gateTitle">Initializing...</h2>
+        <p id="statusLabel">Please wait...</p>
         <button class="ring-btn" id="ringBell">RING</button>
-        <p id="statusLabel">Ready</p>
     </div>
 
     <script type="module">
         import { db } from './firebase-config.js';
         import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-        
-        console.log("Terminal: Firebase initialized and ready.");
-        
-        document.getElementById('ringBell').addEventListener('click', () => {
-            console.log("Bell logic pending");
-        });
+
+        // URL parameters fetch karna
+        const urlParams = new URLSearchParams(window.location.search);
+        const accountId = urlParams.get('id');
+        const gateName = urlParams.get('gate');
+
+        if (!accountId || !gateName) {
+            document.body.innerHTML = "<div class='terminal'><h1 class='error'>Routing Error</h1><p>Missing Gate Configuration.</p></div>";
+        } else {
+            document.getElementById('gateTitle').innerText = gateName;
+            document.getElementById('statusLabel').innerText = "System Ready";
+
+            document.getElementById('ringBell').addEventListener('click', async () => {
+                document.getElementById('statusLabel').innerText = "Ringing...";
+                try {
+                    await addDoc(collection(db, "logs"), {
+                        accountId: accountId,
+                        gateName: gateName,
+                        timestamp: new Date().toISOString(),
+                        status: "pending"
+                    });
+                    document.getElementById('statusLabel').innerText = "Notification Sent!";
+                } catch (e) {
+                    document.getElementById('statusLabel').innerText = "Error!";
+                    console.error(e);
+                }
+            });
+        }
     </script>
 </body>
 </html>
