@@ -2,105 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GatePass - Live Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GatePass - Live Monitor Feed</title>
     <style>
-        body { 
-            background-color: #121212; 
-            color: #ffffff; 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { color: #00adb5; margin-bottom: 5px; }
-        .dashboard-card {
-            background-color: #1e1e1e;
-            padding: 20px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            text-align: center;
-        }
-        .status-badge {
-            background-color: #ff4a4a;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            display: inline-block;
-            margin-bottom: 15px;
-            animation: blink 1.5s infinite;
-        }
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        .snapshot-container {
-            width: 100%;
-            height: 250px;
-            background-color: #333;
-            border-radius: 10px;
-            margin: 15px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .snapshot-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .info-text { color: #aaaaaa; font-size: 14px; margin: 5px 0; }
-        .action-btn {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            margin-top: 15px;
-            box-shadow: 0 4px 10px rgba(40, 167, 69, 0.3);
-        }
-        .action-btn:active { transform: scale(0.98); }
-        .no-data { color: #888; font-style: italic; }
+        body { background-color: #0b0f19; color: #fff; font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
+        .app-header { text-align: center; margin: 15px 0 25px 0; width: 100%; max-width: 450px; }
+        .app-header h1 { font-size: 26px; font-weight: 800; margin: 0; color: #00f2fe; }
+        .app-header p { color: #64748b; margin: 4px 0 0 0; font-size: 13px; font-weight: 500; }
+        .app-card { background: #131a2c; padding: 22px; border-radius: 24px; width: 100%; max-width: 450px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 1px solid #1e293b; box-sizing: border-box; text-align: center; }
+        .status-badge { background: #ef4444; color: white; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; margin-bottom: 15px; letter-spacing: 0.5px; animation: glow 1.5s infinite; }
+        @keyframes glow { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .snapshot-frame { width: 100%; height: 260px; background: #0b0f19; border-radius: 16px; margin: 15px 0; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #1e293b; position: relative; }
+        .snapshot-frame img { width: 100%; height: 100%; object-fit: cover; }
+        .meta-container { background: #0b0f19; padding: 12px; border-radius: 12px; border: 1px solid #1e293b; text-align: left; }
+        .meta-text { color: #94a3b8; font-size: 13px; margin: 6px 0; font-family: system-ui; }
+        .meta-text strong { color: #fff; }
+        .action-btn { background: linear-gradient(135deg, #00e676, #00b0ff); color: #fff; border: none; padding: 15px; font-size: 14px; font-weight: 700; border-radius: 12px; cursor: pointer; width: 100%; margin-top: 15px; box-shadow: 0 4px 14px rgba(0,230,118,0.25); }
     </style>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-
-    <div class="header">
-        <h1 id="dashTitle">Loading Dashboard... 🏠</h1>
-        <p id="dashSubTitle">Connecting to Real-time Feed</p>
-    </div>
-
-    <div class="dashboard-card" id="alertCard">
+    <div class="app-header"><h1 id="dashTitle">Iqbal House Dashboard 🏠</h1><p id="dashSubTitle">Ghar Walon Ki Live Screen</p></div>
+    <div class="app-card">
         <div id="statusBadge" class="status-badge" style="display: none;">🚨 LIVE VISITOR</div>
-        
-        <div class="snapshot-container" id="snapContainer">
-            <p class="no-data" id="waitingText">Bahar koi nahi hai. Waiting for bell... 🕒</p>
+        <div class="snapshot-frame" id="snapContainer">
+            <p id="waitingText" style="color:#475569; font-style:italic; font-size:14px;">Bahar koi nahi hai. Waiting for bell... 🕒</p>
             <img id="visitorImg" src="" style="display: none;" />
         </div>
-
-        <div id="visitorInfo" style="text-align: left; padding: 0 10px;">
-            <p class="info-text"><strong>Gate:</strong> <span id="gateName">-</span></p>
-            <p class="info-text"><strong>Time:</strong> <span id="bellTime">-</span></p>
+        <div class="meta-container">
+            <div class="meta-text"><strong>Gate:</strong> <span id="gateName">-</span></div>
+            <div class="meta-text"><strong>Time:</strong> <span id="bellTime">-</span></div>
         </div>
-
         <button class="action-btn" id="openBtn" onclick="openGate()" style="display: none;">✅ OPEN GATE</button>
     </div>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
@@ -110,87 +45,38 @@
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
+        const urlParams = new URLSearchParams(window.location.search); let saasId = urlParams.get('id') || "DEFAULT_PREVIOUS_PRESET";
 
-        // 🧠 URL Se Parameter (SaaS ID) Nikalna
-        const urlParams = new URLSearchParams(window.location.search);
-        let saasId = urlParams.get('id');
-
-        // Fallback agar koi baghair ID ke dashboard khole
-        if (!saasId) {
-            saasId = "DEFAULT_PREVIOUS_PRESET";
-            document.getElementById("dashTitle").innerText = "Iqbal House Dashboard 🏠";
-            document.getElementById("dashSubTitle").innerText = "Ghar Walon Ki Live Screen";
-            listenToLogs(saasId);
-        } else {
-            // Firebase se is specific SaaS ID ka Title load karna
+        if (saasId !== "DEFAULT_PREVIOUS_PRESET") {
             db.collection("users").doc(saasId).get().then((doc) => {
-                if (doc.exists) {
-                    const data = doc.data();
-                    document.getElementById("dashTitle").innerText = `${data.buildingName || "Home"} Dashboard 🏠`;
-                    document.getElementById("dashSubTitle").innerText = `${data.city || "Live Screen"}`;
-                    listenToLogs(saasId);
-                } else {
-                    document.getElementById("dashTitle").innerText = "Invalid Dashboard ID ❌";
-                }
+                if (doc.exists) document.getElementById("dashTitle").innerText = `${doc.data().buildingName} Dashboard 🏠`;
             });
         }
+        
+        let currentActiveId = null;
+        db.collection("logs").onSnapshot((snap) => {
+            let latestAlert = null;
+            snap.forEach((doc) => {
+                const d = doc.data();
+                if (d.status === "ringing" && d.accountId === saasId) latestAlert = { id: doc.id, ...d };
+            });
+            if (latestAlert) {
+                currentActiveId = latestAlert.id; document.getElementById("statusBadge").style.display = "inline-block";
+                document.getElementById("waitingText").style.display = "none";
+                const img = document.getElementById("visitorImg"); img.src = latestAlert.snapshot; img.style.display = "block";
+                document.getElementById("gateName").innerText = latestAlert.gate; document.getElementById("bellTime").innerText = latestAlert.timestamp;
+                document.getElementById("openBtn").style.display = "block";
+            } else { clearDashboard(); }
+        });
 
-        let currentActiveDocId = null;
-
-        // 🔥 Sirf is specific account ki real-time monitoring karna
-        function listenToLogs(accountId) {
-            db.collection("logs")
-              .onSnapshot((snapshot) => {
-                  let activeAlert = null;
-
-                  snapshot.forEach((doc) => {
-                      const data = doc.data();
-                      // Filter: Status 'ringing' ho AUR accountId match kare
-                      if (data.status === "ringing" && data.accountId === accountId) {
-                          activeAlert = { id: doc.id, ...data };
-                      }
-                  });
-
-                  if (activeAlert) {
-                      currentActiveDocId = activeAlert.id;
-
-                      document.getElementById("statusBadge").style.display = "inline-block";
-                      document.getElementById("waitingText").style.display = "none";
-                      
-                      const imgElement = document.getElementById("visitorImg");
-                      imgElement.src = activeAlert.snapshot;
-                      imgElement.style.display = "block";
-
-                      document.getElementById("gateName").innerText = activeAlert.gate;
-                      document.getElementById("bellTime").innerText = activeAlert.timestamp;
-                      document.getElementById("openBtn").style.display = "block";
-                  } else {
-                      resetDashboard();
-                  }
-              });
-        }
-
-        function resetDashboard() {
-            currentActiveDocId = null;
-            document.getElementById("statusBadge").style.display = "none";
-            document.getElementById("waitingText").style.display = "block";
-            document.getElementById("visitorImg").style.display = "none";
-            document.getElementById("gateName").innerText = "-";
-            document.getElementById("bellTime").innerText = "-";
+        function clearDashboard() {
+            currentActiveId = null; document.getElementById("statusBadge").style.display = "none"; document.getElementById("waitingText").style.display = "block";
+            document.getElementById("visitorImg").style.display = "none"; document.getElementById("gateName").innerText = "-"; document.getElementById("bellTime").innerText = "-";
             document.getElementById("openBtn").style.display = "none";
         }
-
         function openGate() {
-            if (currentActiveDocId) {
-                db.collection("logs").doc(currentActiveDocId).update({
-                    status: "opened"
-                }).then(() => {
-                    alert("Gate cleared!");
-                    resetDashboard();
-                });
-            }
+            if (currentActiveId) { db.collection("logs").doc(currentActiveId).update({ status: "opened" }).then(() => { alert("Gate Authorized!"); clearDashboard(); }); }
         }
     </script>
 </body>
