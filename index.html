@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GatePass - Guest Portal</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 85%;
+            max-width: 400px;
+        }
+        h1 { color: #00adb5; font-size: 24px; margin-bottom: 5px; }
+        p { color: #aaaaaa; font-size: 14px; margin-top: 0; }
+        .bell-btn {
+            background: linear-gradient(135deg, #00adb5, #007bb5);
+            color: white;
+            border: none;
+            padding: 20px;
+            border-radius: 50%;
+            font-size: 40px;
+            cursor: pointer;
+            width: 100px;
+            height: 100px;
+            margin: 30px 0;
+            box-shadow: 0 0 20px rgba(0, 173, 181, 0.4);
+            transition: transform 0.2s;
+        }
+        .bell-btn:active { transform: scale(0.95); }
+        .note { font-size: 11px; color: #ff4a4a; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>Welcome to Iqbal House 🏠</h1>
+        <p>Adhi Kot, Khushab</p>
+        
+        <!-- Ring Bell Button -->
+        <button class="bell-btn" onclick="ringBell()">🔔</button>
+        <p style="color: #ffffff; font-weight: bold;">RING BELL</p>
+
+        <p class="note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
+    </div>
+
+    <script>
+        function ringBell() {
+            alert("Bell Sent! Please wait for response...");
+            // Aglay steps mein yahan Firebase ka camera snapshot logic fit karenge.
+        }
+    </script>
+
+</body>
+</html>
