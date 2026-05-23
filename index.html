@@ -3,46 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GatePass - Digital Bell Portal</title>
+    <title>GatePass Terminal - Ring Bell</title>
     <style>
-        body { 
-            background-color: #0b0f19; color: #fff; font-family: -apple-system, sans-serif;
-            margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box;
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #131a2c;
+            --primary: #00f2fe;
+            --primary-glow: rgba(0, 242, 254, 0.3);
+            --success: #00e676;
+            --text-main: #ffffff;
+            --text-muted: #7e8b9b;
+            --border-color: #1e293b;
         }
-        .card { 
-            background: #131a2c; padding: 32px 24px; border-radius: 24px; text-align: center; width: 100%; max-width: 420px;
-            box-shadow: 0 12px 40px rgba(0,0,0,0.5); border: 1px solid #1e293b; box-sizing: border-box;
+        * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body {
+            background-color: var(--bg-color); color: var(--text-main);
+            margin: 0; padding: 20px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
-        h1 { color: #00f2fe; font-size: 24px; font-weight: 800; margin: 0 0 6px 0; }
-        p { color: #9ca3af; font-size: 14px; margin: 0 0 25px 0; }
-        .bell-container {
-            width: 150px; height: 150px; background: radial-gradient(circle, #4facfe 0%, #00f2fe 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 25px auto;
-            box-shadow: 0 0 30px rgba(0, 242, 254, 0.4); outline: none; border: none; cursor: pointer; transition: transform 0.1s;
+        .terminal-container {
+            background-color: var(--card-bg); border: 1px solid var(--border-color);
+            padding: 30px 24px; border-radius: 24px; width: 100%; max-width: 420px;
+            text-align: center; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
         }
-        .bell-container:active { transform: scale(0.95); }
-        .bell-btn { background: transparent; color: #fff; border: none; font-size: 52px; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; }
-        .bell-container:disabled { background: #334155; box-shadow: none; cursor: not-allowed; }
-        video { display: none; } 
-        #statusText { font-size: 15px; font-weight: 700; text-transform: uppercase; color: #ffffff; margin-top: 15px; letter-spacing: 0.5px; }
-        .warning-note { font-size: 11px; color: #ef4444; margin-top: 25px; padding: 0 10px; line-height: 1.4; }
+        .tenant-title { font-size: 24px; font-weight: 800; margin: 0 0 6px 0; color: #fff; }
+        .tenant-meta { font-size: 14px; color: var(--text-muted); margin: 0 0 25px 0; font-weight: 500; }
+        
+        /* Camera Frame Container */
+        .camera-box {
+            width: 100%; max-width: 280px; height: 210px; background: #000;
+            margin: 0 auto 25px auto; border-radius: 18px; overflow: hidden;
+            border: 2px solid var(--border-color); position: relative;
+        }
+        video, canvas { width: 100%; height: 100%; object-fit: cover; }
+        canvas { display: none; }
+
+        /* Modern Pulse Bell Button */
+        .bell-trigger-wrapper { position: relative; width: 120px; height: 120px; margin: 0 auto 20px auto; }
+        .bell-btn {
+            width: 100%; height: 100%; border-radius: 50%;
+            background: linear-gradient(135deg, #00bac7, #00f2fe);
+            border: none; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; font-size: 48px; position: relative; z-index: 2;
+            box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4); transition: transform 0.1s ease;
+        }
+        .bell-btn:active { transform: scale(0.94); }
+        
+        /* Interactive Radar Ring Animation */
+        .bell-trigger-wrapper::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%; background: var(--primary); opacity: 0.4;
+            z-index: 1; animation: radarPulse 2s infinite ease-out;
+        }
+        @keyframes radarPulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            100% { transform: scale(1.5); opacity: 0; }
+        }
+
+        .action-label { font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #fff; margin-bottom: 8px; }
+        .warning-note { font-size: 11px; color: #ef4444; background: rgba(239, 68, 68, 0.08); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(239, 68, 68, 0.15); margin-top: 15px; }
+        
+        /* Status Alerts */
+        .status-toast { display: none; font-size: 14px; font-weight: 700; color: var(--success); margin: 15px 0; padding: 10px; background: rgba(0, 230, 118, 0.1); border-radius: 10px; border: 1px solid rgba(0, 230, 118, 0.2); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-    <div class="card">
-        <h1 id="buildingTitle">Connecting...</h1>
-        <p id="gateSubTitle">Securing gate console sync</p>
-        <video id="video" autoplay playsinline></video>
+
+    <div class="terminal-container">
+        <h2 class="tenant-title" id="displayBuilding">Loading Portal...</h2>
+        <p class="tenant-meta" id="displayGate">Validating routing parameters...</p>
+
+        <div class="camera-box">
+            <video id="webcam" autoplay playsinline muted></video>
+            <canvas id="snapshotCanvas"></canvas>
+        </div>
+
+        <div class="bell-trigger-wrapper">
+            <button class="bell-btn" id="bellActionBtn" onclick="triggerRingingSequence()">🔔</button>
+        </div>
+        <div class="action-label">Ring Bell</div>
         
-        <button class="bell-container" id="bellBtn" onclick="triggerSnapshotRing()" disabled>
-            <div class="bell-btn">🔔</div>
-        </button>
-        
-        <div id="statusText">RING BELL</div>
-        <p class="warning-note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
+        <div class="status-toast" id="statusToast">🔔 BELL SENT SUCCESSFULLY!</div>
+        <div class="warning-note">Note: Bell bajate hi aapki ek live tasveer (Snapshot) ghar walon ko bhei jayegi.</div>
     </div>
+
     <script>
+        // Real-time Database Sync Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             authDomain: "gatepass-saas.firebaseapp.com",
@@ -51,49 +100,77 @@
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
-        firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Extract Dynamic Route Payloads
         const urlParams = new URLSearchParams(window.location.search);
-        let accountId = urlParams.get('id'); let gateName = urlParams.get('gate') || "Main Gate";
+        const accountId = urlParams.get('id');
+        const gateLabel = urlParams.get('gate') || 'Main Gate';
 
-        if (!accountId) {
-            document.getElementById("buildingTitle").innerText = "Welcome to Iqbal House 🏠";
-            document.getElementById("gateSubTitle").innerText = "Adhi Kot, Khushab";
-            activateConsole();
-        } else {
-            db.collection("users").doc(accountId).get().then((doc) => {
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('snapshotCanvas');
+        const toast = document.getElementById('statusToast');
+
+        // Initial setup: Fetch metadata & verify stream
+        function initTerminal() {
+            if (!accountId) {
+                document.getElementById('displayBuilding').innerText = "Routing Error ❌";
+                document.getElementById('displayGate').innerText = "Invalid missing 'id' pointer parameter.";
+                return;
+            }
+
+            // Fetch owner profile data
+            db.collection("users").doc(accountId).get().then(doc => {
                 if (doc.exists) {
-                    document.getElementById("buildingTitle").innerText = `Welcome to ${doc.data().buildingName} 🏠`;
-                    document.getElementById("gateSubTitle").innerText = `${doc.data().city} (${gateName})`;
-                    activateConsole();
+                    const data = doc.data();
+                    document.getElementById('displayBuilding').innerText = `Welcome to ${data.buildingName} 🏠`;
+                    document.getElementById('displayGate').innerText = `${data.city || ''} (${gateLabel})`;
                 } else {
-                    document.getElementById("buildingTitle").innerText = "Terminal Error ❌";
-                    document.getElementById("statusText").innerText = "MISMATCH LINK";
+                    document.getElementById('displayBuilding').innerText = "Unknown Account";
                 }
-            });
+            }).catch(err => console.error("Metadata resolution error:", err));
+
+            // Activate Video stream capturing node
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+                .then(stream => { video.srcObject = stream; })
+                .catch(err => {
+                    console.warn("Camera streaming blocked or unassigned:", err);
+                    alert("Camera Access Request: Please permit camera hardware triggers for identity processing.");
+                });
         }
 
-        function activateConsole() {
-            document.getElementById("bellBtn").disabled = false;
-        }
+        // Logic Core: Trigger Snapshots and Firestore Logs
+        function triggerRingingSequence() {
+            let base64Image = "";
 
-        const video = document.getElementById('video');
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-            .then(stream => { video.srcObject = stream; }).catch(() => console.log("Camera access initialized."));
+            try {
+                // Capture current video index frame
+                const context = canvas.getContext('2d');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                base64Image = canvas.toDataURL('image/jpeg', 0.7);
+            } catch (e) {
+                console.warn("Snapshot capturing failed, sending log fallback.");
+            }
 
-        function triggerSnapshotRing() {
-            const btn = document.getElementById('bellBtn'); const txt = document.getElementById('statusText');
-            btn.disabled = true; txt.innerText = "SENDING ALERT...";
-            
-            const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 360;
-            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            const snapshotUrl = canvas.toDataURL('image/jpeg', 0.7);
-
+            // Write logs tree node payload
             db.collection("logs").add({
-                accountId: accountId || "DEFAULT_PREVIOUS_PRESET", gate: gateName, status: "ringing", snapshot: snapshotUrl, timestamp: new Date().toLocaleString()
-            }).then(() => {
-                txt.style.color = "#00e676"; txt.innerText = "BELL SENT SUCCESSFULLY!";
-            }).catch(() => { txt.innerText = "RETRY"; btn.disabled = false; });
+                accountId: accountId,
+                gateName: gateLabel,
+                snapshot: base64Image, // Encoded Base64 string payload
+                timestamp: new Date().toISOString(),
+                status: "ringing"
+            })
+            .then(() => {
+                toast.style.display = "block";
+                setTimeout(() => { toast.style.display = "none"; }, 4000);
+            })
+            .catch(err => alert("Transmission Error: " + err.message));
         }
+
+        window.onload = initTerminal;
     </script>
 </body>
 </html>
