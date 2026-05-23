@@ -2,72 +2,49 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GatePass - Super Admin Panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GatePass - Digital Bell Portal</title>
     <style>
-        body { background-color: #121212; color: #ffffff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1 { color: #00adb5; margin-bottom: 5px; }
-        .card { background-color: #1e1e1e; padding: 20px; border-radius: 15px; width: 90%; max-width: 500px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-bottom: 20px; box-sizing: border-box; }
-        label { display: block; margin: 10px 0 5px; color: #aaaaaa; font-size: 14px; }
-        input, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background-color: #252525; color: white; box-sizing: border-box; margin-bottom: 10px; font-size: 14px; }
-        .btn { background: #00adb5; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 5px; font-size: 14px; }
-        .btn:active { transform: scale(0.98); }
-        .qr-box { background: #252525; padding: 15px; border-radius: 10px; margin-top: 15px; border: 1px dashed #28a745; display: none; }
-        .qr-box p { margin: 5px 0; font-size: 13px; word-break: break-all; }
-        .gate-list-item { background: #252525; padding: 12px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #00adb5; }
-        .link-text { color: #00adb5; font-size: 13px; text-decoration: none; font-weight: bold; }
-        .copy-btn { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 12px; cursor: pointer; margin-top: 5px; }
+        body { 
+            background-color: #0b0f19; color: #fff; font-family: -apple-system, system-ui, sans-serif;
+            margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; box-sizing: border-box;
+        }
+        .card { 
+            background: #131a2c; padding: 32px 24px; border-radius: 24px; text-align: center; width: 100%; max-width: 420px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5); border: 1px solid #1e293b; box-sizing: border-box;
+        }
+        h1 { color: #fff; font-size: 24px; font-weight: 800; margin: 0 0 6px 0; letter-spacing: -0.5px; }
+        p { color: #9ca3af; font-size: 14px; margin: 0 0 25px 0; }
+        .bell-container {
+            width: 140px; height: 140px; background: rgba(0, 242, 254, 0.04); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 25px auto;
+            border: 2px dashed rgba(0, 242, 254, 0.25);
+        }
+        .bell-btn { 
+            background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; border: none; padding: 0;
+            border-radius: 50%; font-size: 44px; cursor: pointer; width: 110px; height: 110px; 
+            box-shadow: 0 8px 24px rgba(0, 242, 254, 0.35); display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.1s ease;
+        }
+        .bell-btn:active { transform: scale(0.94); }
+        .bell-btn:disabled { background: #334155; color: #64748b; box-shadow: none; cursor: not-allowed; }
+        video { display: none; } 
+        #statusText { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #00f2fe; margin-top: 15px; }
+        .warning-note { font-size: 11px; color: #ef4444; line-height: 1.5; margin-top: 25px; font-weight: 500; background: rgba(239, 68, 68, 0.04); padding: 12px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.15); }
     </style>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
-
-    <h1>SaaS Admin Dashboard Center ⚙️</h1>
-    <p style="color: #888; margin-top: 0; text-align: center;">Manage Buildings, Gates & Generate QR Codes</p>
-
     <div class="card">
-        <h3 style="margin-top:0; color:#00adb5;">1. Setup New Building (Account)</h3>
-        <label>Building / Owner Name</label>
-        <input type="text" id="bName" placeholder="e.g., Ali Campus or Ideal Salon">
-        
-        <label>City</label>
-        <input type="text" id="bCity" placeholder="e.g., Adhi Kot">
-        
-        <button class="btn" onclick="registerBuilding()">Create SaaS Account</button>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0; color:#28a745;">2. Add Gate & Generate QR Portal</h3>
-        <label>Select Account (Building)</label>
-        <select id="accountSelect">
-            <option value="">-- Loading Accounts... --</option>
-        </select>
-        
-        <label>Gate Name</label>
-        <input type="text" id="gateNameInput" placeholder="e.g., Main Gate, Back Gate, Office Door">
-        
-        <button class="btn" style="background: #28a745;" onclick="createGate()">Generate Gate QR Link</button>
-
-        <div class="qr-box" id="qrResultBox">
-            <h4 style="color: #28a745; margin: 0 0 10px 0;">🎉 Gate Portal Generated!</h4>
-            <p><strong>Guest Portal URL:</strong></p>
-            <p id="generatedUrl" style="color: #00adb5; background: #121212; padding: 10px; border-radius: 5px; font-family: monospace;"></p>
-            
-            <p style="margin-top: 10px;"><strong>Family Dashboard URL:</strong></p>
-            <p id="generatedDashUrl" style="color: #ffb400; background: #121212; padding: 10px; border-radius: 5px; font-family: monospace;"></p>
-            
-            <button class="copy-btn" onclick="copyLinks()">📋 Copy Both Links</button>
+        <h1 id="buildingTitle">Connecting...</h1>
+        <p id="gateSubTitle">Securing gate console sync</p>
+        <video id="video" autoplay playsinline></video>
+        <div class="bell-container">
+            <button class="bell-btn" id="bellBtn" onclick="triggerSnapshotRing()" disabled>🔔</button>
         </div>
+        <div id="statusText">INITIALIZING...</div>
+        <p class="warning-note">Note: Bell bajate hi aapki aik tasveer (Snapshot) ghar walon ko bheji jayegi.</p>
     </div>
-
-    <div class="card">
-        <h3 style="margin-top:0; color:#ffb400;">3. Active Gates Infrastructure</h3>
-        <div id="gatesList"><p style="color:#666; font-style:italic;">Loading gates...</p></div>
-    </div>
-
     <script>
-        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             authDomain: "gatepass-saas.firebaseapp.com",
@@ -76,135 +53,51 @@
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+        firebase.initializeApp(firebaseConfig); const db = firebase.firestore();
+        const urlParams = new URLSearchParams(window.location.search);
+        let accountId = urlParams.get('id'); let gateName = urlParams.get('gate') || "Main Gate";
 
-        // 🧠 Live Listener for Buildings Dropdown
-        function listenBuildings() {
-            db.collection("users").onSnapshot((snapshot) => {
-                const select = document.getElementById("accountSelect");
-                select.innerHTML = '<option value="">-- Select Building --</option>';
-                
-                // Agar aapka pehla fix preset 'IQBAL_HOUSE_123' data mein na ho, to manually pehle add kar dete hain fallback ke liye
-                let optionDefault = document.createElement("option");
-                optionDefault.value = "DEFAULT_PREVIOUS_PRESET";
-                optionDefault.text = "Iqbal House (Adhi Kot) - Default";
-                select.appendChild(optionDefault);
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    // Sirf wahi load karein jinke pass buildingName ya fullName ho
-                    if (data.buildingName || data.fullName) {
-                        let option = document.createElement("option");
-                        option.value = doc.id; 
-                        option.text = `${data.buildingName || data.fullName} (${data.city || 'Local'})`;
-                        select.appendChild(option);
-                    }
-                });
-            }, (error) => {
-                console.error("Error loading buildings:", error);
-            });
-        }
-
-        // 🧠 Live Listener for Registered Gates List
-        function listenGatesList() {
-            db.collection("gates").onSnapshot((snapshot) => {
-                const container = document.getElementById("gatesList");
-                container.innerHTML = "";
-                
-                if (snapshot.empty) {
-                    container.innerHTML = "<p style='color:#666; font-style:italic;'>No active gates found. Create one above!</p>";
-                    return;
+        if (!accountId) {
+            document.getElementById("buildingTitle").innerText = "Welcome to Iqbal House 🏠";
+            document.getElementById("gateSubTitle").innerText = "Adhi Kot, Khushab";
+            activateConsole("RING BELL");
+        } else {
+            db.collection("users").doc(accountId).get().then((doc) => {
+                if (doc.exists) {
+                    const d = doc.data();
+                    document.getElementById("buildingTitle").innerText = `Welcome to ${d.buildingName} 🏠`;
+                    document.getElementById("gateSubTitle").innerText = `${d.city} (${gateName})`;
+                    activateConsole("RING BELL");
+                } else {
+                    document.getElementById("buildingTitle").innerText = "Invalid Gateway ❌";
+                    document.getElementById("statusText").innerText = "TERMINAL MISMATCH";
                 }
-
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const div = document.createElement("div");
-                    div.className = "gate-list-item";
-                    
-                    const gateLink = `https://gatepass-saas-app.vercel.app/?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
-                    
-                    div.innerHTML = `
-                        <div>
-                            <strong style="color:#00adb5;">${data.gateName}</strong><br>
-                            <span style="font-size:11px; color:#aaa;">Account ID: ${data.accountId}</span>
-                        </div>
-                        <a href="${gateLink}" target="_blank" class="link-text">Open Portal 🔗</a>
-                    `;
-                    container.appendChild(div);
-                });
-            }, (error) => {
-                console.error("Error loading gates:", error);
             });
         }
 
-        // 1. Setup New Building Account
-        function registerBuilding() {
-            const name = document.getElementById("bName").value.trim();
-            const city = document.getElementById("bCity").value.trim();
+        function activateConsole(msg) {
+            document.getElementById("bellBtn").disabled = false;
+            document.getElementById("statusText").innerText = msg;
+        }
+
+        const video = document.getElementById('video');
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            .then(stream => { video.srcObject = stream; }).catch(() => console.log("Camera permissions fallback"));
+
+        function triggerSnapshotRing() {
+            const btn = document.getElementById('bellBtn'); const txt = document.getElementById('statusText');
+            btn.disabled = true; txt.innerText = "SENDING ALERT...";
             
-            if (!name || !city) {
-                return alert("Please enter both Building Name and City!");
-            }
+            const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 240;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            const snapshotUrl = canvas.toDataURL('image/jpeg');
 
-            db.collection("users").add({
-                buildingName: name,
-                city: city,
-                timestamp: new Date().toLocaleString()
-            })
-            .then(() => {
-                alert("🎉 SaaS Building Account Created Successfully!");
-                document.getElementById("bName").value = "";
-                document.getElementById("bCity").value = "";
-            })
-            .catch((err) => {
-                alert("Error creating account: " + err.message);
-            });
+            db.collection("logs").add({
+                accountId: accountId || "DEFAULT_PREVIOUS_PRESET", gate: gateName, status: "ringing", snapshot: snapshotUrl, timestamp: new Date().toLocaleString()
+            }).then(() => {
+                txt.style.color = "#00e676"; txt.innerText = "Bell Sent Successfully!";
+            }).catch(() => { txt.innerText = "RETRY"; btn.disabled = false; });
         }
-
-        // 2. Add Gate and Generate Dynamic URL Links
-        function createGate() {
-            const accountId = document.getElementById("accountSelect").value;
-            const gateName = document.getElementById("gateNameInput").value.trim();
-            
-            if (!accountId || !gateName) {
-                return alert("Please select a building and enter a gate name!");
-            }
-
-            db.collection("gates").add({
-                accountId: accountId,
-                gateName: gateName,
-                timestamp: new Date().toLocaleString()
-            })
-            .then(() => {
-                const guestUrl = `https://gatepass-saas-app.vercel.app/?id=${accountId}&gate=${encodeURIComponent(gateName)}`;
-                const dashUrl = `https://gatepass-saas-app.vercel.app/dashboard.html?id=${accountId}`;
-                
-                document.getElementById("qrResultBox").style.display = "block";
-                document.getElementById("generatedUrl").innerText = guestUrl;
-                document.getElementById("generatedDashUrl").innerText = dashUrl;
-                
-                document.getElementById("gateNameInput").value = "";
-            })
-            .catch((err) => {
-                alert("Error generating gate: " + err.message);
-            });
-        }
-
-        // Copy Links Helper Function
-        function copyLinks() {
-            const guest = document.getElementById("generatedUrl").innerText;
-            const dash = document.getElementById("generatedDashUrl").innerText;
-            const textToCopy = `Guest Link: ${guest}\nDashboard Link: ${dash}`;
-            
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                alert("Both links copied to clipboard! 👍");
-            });
-        }
-
-        // Start listening to live data when page loads
-        listenBuildings();
-        listenGatesList();
     </script>
 </body>
 </html>
