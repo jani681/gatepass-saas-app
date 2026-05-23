@@ -118,34 +118,39 @@
 
         let currentActiveDocId = null;
 
-        // 🧠 Real-Time Listener: Yeh Firebase par nazar rakhega bina page refresh kiye
+        // 🧠 Simplified Real-Time Listener: Bina kisi indexing error ke logs read karega
         db.collection("logs")
-          .where("status", "==", "ringing")
-          .orderBy("timestamp", "desc")
-          .limit(1)
           .onSnapshot((snapshot) => {
-              if (!snapshot.empty) {
-                  // Agar koi active bell baj rahi hai
-                  snapshot.forEach((doc) => {
-                      const data = doc.data();
-                      currentActiveDocId = doc.id;
+              let activeAlert = null;
 
-                      // Card ko update karna
-                      document.getElementById("statusBadge").style.display = "inline-block";
-                      document.getElementById("waitingText").style.display = "none";
-                      
-                      const imgElement = document.getElementById("visitorImg");
-                      imgElement.src = data.snapshot;
-                      imgElement.style.display = "block";
+              // Saare documents check karke active ringing bell nikalna
+              snapshot.forEach((doc) => {
+                  const data = doc.data();
+                  if (data.status === "ringing") {
+                      activeAlert = { id: doc.id, ...data };
+                  }
+              });
 
-                      document.getElementById("gateName").innerText = data.gate;
-                      document.getElementById("bellTime").innerText = data.timestamp;
-                      document.getElementById("openBtn").style.display = "block";
-                  });
+              if (activeAlert) {
+                  currentActiveDocId = activeAlert.id;
+
+                  // Dashboard UI ko update karna
+                  document.getElementById("statusBadge").style.display = "inline-block";
+                  document.getElementById("waitingText").style.display = "none";
+                  
+                  const imgElement = document.getElementById("visitorImg");
+                  imgElement.src = activeAlert.snapshot;
+                  imgElement.style.display = "block";
+
+                  document.getElementById("gateName").innerText = activeAlert.gate;
+                  document.getElementById("bellTime").innerText = activeAlert.timestamp;
+                  document.getElementById("openBtn").style.display = "block";
               } else {
-                  // Agar koi bell nahi baj rahi
+                  // Agar koi active ringing bell nahi hai to reset kar do
                   resetDashboard();
               }
+          }, (error) => {
+              console.error("Snapshot error: ", error);
           });
 
         function resetDashboard() {
@@ -160,7 +165,7 @@
 
         function openGate() {
             if (currentActiveDocId) {
-                // Database mein status tabdeel kar dena taake popup gayab ho jaye
+                // Database mein status ko updated kar dena taake dashboard normal ho jaye
                 db.collection("logs").doc(currentActiveDocId).update({
                     status: "opened"
                 })
