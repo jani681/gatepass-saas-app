@@ -3,85 +3,62 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aaryan's House</title>
+    <title>Aaryan's House Security</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; text-align: center; }
-        .container { max-width: 400px; margin: auto; }
-        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .log-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569; }
+        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
+        #video { width: 100%; border-radius: 15px; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="card">
         <h1>Aaryan's House</h1>
-        <button class="btn" id="ringBtn" onclick="ringBell()">🔔 RING BELL</button>
-        <p id="status" style="margin-bottom:20px;">Ready</p>
-
-        <div class="card">
-            <h3 style="margin-top:0;">Recent Visitors</h3>
-            <div id="logs">Loading...</div>
-        </div>
+        <button class="btn" onclick="startScanner()">SCAN QR TO ENTER</button>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        const firebaseConfig = {
+        const db = getFirestore(initializeApp({
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             projectId: "gatepass-saas",
-            authDomain: "gatepass-saas.firebaseapp.com",
-            storageBucket: "gatepass-saas.appspot.com",
-            messagingSenderId: "788886920648",
-            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
-        };
-        
-        const db = getFirestore(initializeApp(firebaseConfig));
+            // ...config
+        }));
 
-        // Ring Bell Function
-        window.ringBell = async () => {
-            const btn = document.getElementById('ringBtn');
-            const status = document.getElementById('status');
-            btn.disabled = true;
-            status.innerText = "Ringing...";
+        window.startScanner = async () => {
+            const video = document.getElementById('video');
+            video.style.display = 'block';
             
-            try {
-                await addDoc(collection(db, "logs"), { 
-                    timestamp: serverTimestamp(),
-                    action: "Visitor Ring" 
-                });
-                status.innerText = "Sent!";
-                setTimeout(() => { status.innerText = "Ready"; btn.disabled = false; }, 2000);
-            } catch (e) {
-                status.innerText = "Error!";
-                btn.disabled = false;
-            }
-        };
+            // Camera On
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
 
-        // Live Logs Display
-        onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
-            const logsDiv = document.getElementById("logs");
-            logsDiv.innerHTML = "";
-            
-            if (snap.empty) {
-                logsDiv.innerHTML = "<p>No visitors yet.</p>";
-                return;
-            }
-
-            snap.forEach(doc => {
-                const data = doc.data();
-                // Check if timestamp exists and is a valid Firestore Timestamp
-                let timeStr = "Recent";
-                if (data.timestamp && typeof data.timestamp.toDate === 'function') {
-                    timeStr = data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
+            // 3 seconds baad snapshot capture
+            setTimeout(async () => {
+                const canvas = document.getElementById('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
                 
-                logsDiv.innerHTML += `<div class="log-item"><b>${timeStr}</b> - Visitor Arrived</div>`;
-            });
-        });
+                // Snapshot le liya, ab Firestore mein push karein
+                const imageBase64 = canvas.toDataURL('image/jpeg');
+                await addDoc(collection(db, "logs"), {
+                    timestamp: serverTimestamp(),
+                    snapshot: imageBase64,
+                    gate: "Main Gate", // Isay hum dynamic karenge
+                    action: "Guest Entry"
+                });
+                
+                alert("Alert sent to Aaryan's family!");
+                video.style.display = 'none';
+                stream.getTracks().forEach(track => track.stop());
+            }, 3000);
+        };
     </script>
 </body>
 </html>
