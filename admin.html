@@ -1,87 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Aaryan House Admin Panel</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#0B1220;
+  color:white;
+}
+
+.header{
+  padding:16px;
+  text-align:center;
+  background:#111A2E;
+  font-size:18px;
+  font-weight:700;
+}
+
+.sub{
+  text-align:center;
+  color:#94A3B8;
+  font-size:12px;
+  margin-top:-10px;
+  margin-bottom:10px;
+}
+
+.container{
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.card{
+  background:#111A2E;
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+img{
+  width:70px;
+  height:70px;
+  border-radius:10px;
+  object-fit:cover;
+  background:#000;
+}
+
+.badge{
+  display:inline-block;
+  padding:3px 10px;
+  background:#3B82F6;
+  border-radius:20px;
+  font-size:12px;
+  margin-top:4px;
+}
+
+.time{
+  font-size:12px;
+  color:#94A3B8;
+}
+
+.empty{
+  text-align:center;
+  margin-top:40px;
+  color:#94A3B8;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">🏠 Aaryan House Security</div>
+<div class="sub">Live Admin Dashboard + Smart Alerts</div>
+
+<div class="container" id="list">
+  <div class="empty">Waiting for guest activity...</div>
+</div>
+
+<script type="module">
+
+/* ================= FIREBASE CORE ================= */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ================= PUSH NOTIFICATIONS ================= */
+
 import { getMessaging, getToken, onMessage } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
-/* ================= VAPID KEY ================= */
+/* ================= CONFIG ================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFvW1OlCywfyDX6ix0",
+  authDomain: "gatepass-saas.firebaseapp.com",
+  projectId: "gatepass-saas",
+  storageBucket: "gatepass-saas.appspot.com",
+  messagingSenderId: "788886920648",
+  appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+};
 
 const VAPID_KEY =
 "BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
 
-/* ================= MESSAGING INIT ================= */
+/* ================= INIT ================= */
 
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 const messaging = getMessaging(app);
 
-let swRegistration = null;
+const list = document.getElementById("list");
 
-/* ================= INIT PUSH SYSTEM ================= */
+/* ================= SAFE TIME ================= */
 
-async function initPushSystem(){
+function safeTime(t){
+  try{
+    return new Date(t).toLocaleString();
+  }catch(e){
+    return "Unknown time";
+  }
+}
 
-  try {
+/* ================= LIVE FIRESTORE ================= */
 
-    // 1. Register service worker
-    swRegistration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+const q = query(collection(db,"alerts"));
 
-    console.log("✔ Service Worker registered");
+onSnapshot(q,(snapshot)=>{
 
-    // 2. Request permission
+  list.innerHTML = "";
+
+  if(snapshot.empty){
+    list.innerHTML = `<div class="empty">No guest entries yet</div>`;
+    return;
+  }
+
+  snapshot.forEach(doc=>{
+    const d = doc.data();
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${d.frontSnapshot || ''}" />
+      <div>
+        <div><b>Guest Entry</b></div>
+        <div class="badge">${d.gateId || "Unknown Gate"}</div>
+        <div class="time">${safeTime(d.timestamp)}</div>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+
+});
+
+/* ================= PUSH SYSTEM ================= */
+
+let swReg = null;
+
+async function initPush(){
+
+  try{
+
+    swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+
     const permission = await Notification.requestPermission();
+    if(permission !== "granted") return;
 
-    if (permission !== "granted") {
-      console.warn("❌ Notification permission denied");
-      return;
-    }
-
-    // 3. Get FCM token (IMPORTANT PART)
-    const token = await getToken(messaging, {
+    const token = await getToken(messaging,{
       vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swRegistration
+      serviceWorkerRegistration: swReg
     });
 
-    if (token) {
-      console.log("🔥 FCM DEVICE TOKEN:");
-      console.log(token);
+    console.log("🔥 FCM TOKEN:");
+    console.log(token);
 
-      // OPTIONAL: store token in Firestore if needed later
-      // await setDoc(doc(db, "devices", "admin"), { token });
-    }
-
-  } catch (err) {
-    console.error("❌ Push init failed:", err);
+  }catch(e){
+    console.error("Push init failed:",e);
   }
 }
 
 /* ================= FOREGROUND NOTIFICATIONS ================= */
 
-onMessage(messaging, (payload) => {
+onMessage(messaging,(payload)=>{
 
-  console.log("📩 Foreground message:", payload);
-
-  try {
-    new Notification(
-      payload?.notification?.title || "🚪 Gate Alert!",
-      {
-        body: payload?.notification?.body || "New guest arrived",
-        icon: payload?.notification?.icon || "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-        vibrate: [200, 100, 200],
-        tag: "gate-alert-live"
-      }
-    );
-  } catch (e) {
-    console.error("Notification error:", e);
+  try{
+    new Notification("🚪 Gate Alert!",{
+      body: payload?.data?.body || "New guest detected",
+      icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+      vibrate:[200,100,200]
+    });
+  }catch(e){
+    console.error("Notification error:",e);
   }
 
 });
 
-/* ================= AUTO INIT TRIGGER ================= */
+/* ================= AUTO INIT ================= */
 
-/*
-IMPORTANT:
-Browser requires user interaction for permission.
-So we trigger on first click anywhere.
-*/
+window.addEventListener("click", initPush, { once:true });
 
-window.addEventListener("click", initPushSystem, { once: true });
+</script>
 
-window.addEventListener("load", () => {
-  console.log("Admin dashboard loaded — push system ready");
-});
+</body>
+</html>
