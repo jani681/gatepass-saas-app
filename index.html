@@ -3,76 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GatePass App</title>
+    <title>Aaryan's GatePass</title>
     <style>
-        :root { --primary: #6366f1; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
-        .app-container { max-width: 400px; margin: auto; }
-        .view { display: none; }
-        .active { display: block; }
-        .btn { width: 100%; padding: 18px; border-radius: 12px; border: none; background: var(--card); box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 12px; font-weight: 600; cursor: pointer; text-align: left; }
-        .btn-primary { background: var(--primary); color: white; }
+        :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
+        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 400px; margin: auto; }
+        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; margin-top: 20px; }
+        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
-    <div class="app-container">
-        <div id="homeView" class="view active">
-            <h1>GatePass</h1>
-            <p>Select Mode</p>
-            <button class="btn" onclick="switchView('terminalView')">Visitor Terminal 🔔</button>
-            <button class="btn" onclick="switchView('dashboardView')">Resident Dashboard 📱</button>
-            <button class="btn btn-primary" onclick="switchView('adminView')">Admin Panel ⚙️</button>
+    <div class="container">
+        <h1>Aaryan's House</h1>
+        
+        <div id="terminal">
+            <button class="btn" onclick="ringBell()">🔔 RING BELL</button>
+            <p id="status">Ready</p>
         </div>
 
-        <div id="terminalView" class="view">
-            <button onclick="switchView('homeView')">← Back</button>
-            <h2>Visitor Terminal</h2>
-            <button class="btn btn-primary" onclick="ringBell()">RING BELL</button>
-        </div>
-
-        <div id="adminView" class="view">
-            <button onclick="switchView('homeView')">← Back</button>
-            <h2>Admin Panel</h2>
-            <input type="text" id="bName" placeholder="Building Name" style="width:100%; padding:10px; margin-bottom:10px;">
-            <button class="btn" onclick="addBuilding()">Register Building</button>
+        <div class="card">
+            <h3>Recent Visitors</h3>
+            <div id="logs">Loading logs...</div>
         </div>
     </div>
 
     <script type="module">
-        // Firebase Modular SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
-            authDomain: "gatepass-saas.firebaseapp.com",
             projectId: "gatepass-saas",
-            storageBucket: "gatepass-saas.appspot.com",
-            messagingSenderId: "788886920648",
-            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+            // ... baaki config wahi hai
         };
+        const db = getFirestore(initializeApp(firebaseConfig));
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        // UI Switching Logic
-        window.switchView = (viewId) => {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            document.getElementById(viewId).classList.add('active');
-        };
-
-        // Functional Logic
-        window.addBuilding = async () => {
-            const name = document.getElementById("bName").value;
-            await addDoc(collection(db, "users"), { buildingName: name, timestamp: new Date().toISOString() });
-            alert("Added!");
-        };
-
+        // Ring Bell Function
         window.ringBell = async () => {
-            alert("Ringing...");
-            // Log logic here
+            document.getElementById('status').innerText = "Ringing...";
+            await addDoc(collection(db, "logs"), { 
+                timestamp: new Date().toISOString(),
+                action: "Visitor Ring" 
+            });
+            document.getElementById('status').innerText = "Sent!";
+            setTimeout(() => document.getElementById('status').innerText = "Ready", 2000);
         };
+
+        // Live Logs (Dashboard)
+        onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
+            const logsDiv = document.getElementById("logs");
+            logsDiv.innerHTML = "";
+            snap.forEach(doc => {
+                logsDiv.innerHTML += `<p>${new Date(doc.data().timestamp).toLocaleTimeString()}: Visitor Arrived</p>`;
+            });
+        });
     </script>
 </body>
 </html>
