@@ -1,9 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0"/>
+
 <title>Gate Device - Aaryan House</title>
+
+<!-- PWA -->
+<meta name="theme-color" content="#0B1220"/>
+
+<link rel="manifest" href="manifest.json"/>
+
+<link rel="apple-touch-icon"
+href="https://cdn-icons-png.flaticon.com/512/6195/6195700.png"/>
 
 <style>
 
@@ -50,7 +62,7 @@ video{
   border-radius:14px;
   background:black;
   margin-top:10px;
-  aspect-ratio: 3/4;
+  aspect-ratio:3/4;
   object-fit:cover;
 }
 
@@ -89,6 +101,10 @@ button:disabled{
   color:#93C5FD;
 }
 
+.install-btn{
+  background:#16A34A;
+}
+
 </style>
 </head>
 
@@ -114,6 +130,14 @@ button:disabled{
 
     <button id="scanBtn">
       Scan Guest
+    </button>
+
+    <button
+      id="installBtn"
+      class="install-btn"
+      style="display:none;"
+    >
+      Install App
     </button>
 
     <div class="status" id="status">
@@ -160,11 +184,13 @@ const canvas = document.getElementById("canvas");
 const btn = document.getElementById("scanBtn");
 const status = document.getElementById("status");
 const gateLabel = document.getElementById("gateLabel");
+const installBtn = document.getElementById("installBtn");
 
 /* ================= STATE ================= */
 
 let stream = null;
 let running = false;
+let deferredPrompt = null;
 
 /* ================= HELPERS ================= */
 
@@ -189,6 +215,44 @@ function getGateId(){
 const CURRENT_GATE = getGateId();
 
 gateLabel.innerText = CURRENT_GATE;
+
+/* ================= PWA INSTALL ================= */
+
+window.addEventListener("beforeinstallprompt", (e)=>{
+
+  e.preventDefault();
+
+  deferredPrompt = e;
+
+  installBtn.style.display = "block";
+});
+
+installBtn.addEventListener("click", async ()=>{
+
+  if(!deferredPrompt) return;
+
+  deferredPrompt.prompt();
+
+  await deferredPrompt.userChoice;
+
+  deferredPrompt = null;
+
+  installBtn.style.display = "none";
+});
+
+/* ================= SERVICE WORKER ================= */
+
+if("serviceWorker" in navigator){
+
+  window.addEventListener("load", ()=>{
+
+    navigator.serviceWorker.register("./sw.js")
+      .then(()=>console.log("SW Registered"))
+      .catch(err=>console.error(err));
+
+  });
+
+}
 
 /* ================= CAMERA ================= */
 
@@ -228,7 +292,7 @@ async function startCam(mode){
   await wait(300);
 }
 
-/* ================= ULTRA SAFE IMAGE CAPTURE ================= */
+/* ================= IMAGE CAPTURE ================= */
 
 function capture(){
 
@@ -242,7 +306,6 @@ function capture(){
 
   ctx.drawImage(video, 0, 0, width, height);
 
-  /* SUPER compressed for Firestore safety */
   return canvas.toDataURL("image/jpeg", 0.25);
 }
 
@@ -257,7 +320,7 @@ async function scan(){
 
   try{
 
-    /* ===== REAR CAMERA ===== */
+    /* REAR CAMERA */
 
     setStatus("Opening rear camera...");
 
@@ -271,7 +334,7 @@ async function scan(){
 
     await wait(500);
 
-    /* ===== FRONT CAMERA ===== */
+    /* FRONT CAMERA */
 
     setStatus("Capturing guest face...");
 
@@ -283,7 +346,7 @@ async function scan(){
 
     await stopCam();
 
-    /* ===== SAFE PAYLOAD ===== */
+    /* DATA */
 
     const data = {
 
@@ -291,9 +354,9 @@ async function scan(){
 
       gateId: CURRENT_GATE,
 
-      rearSnapshot: rearSnapshot.substring(0, 150000),
+      rearSnapshot: rearSnapshot.substring(0,150000),
 
-      frontSnapshot: frontSnapshot.substring(0, 150000),
+      frontSnapshot: frontSnapshot.substring(0,150000),
 
       action: "Guest Entry",
 
@@ -304,22 +367,17 @@ async function scan(){
       status: "new",
 
       device: "gate-device"
-
     };
 
-    console.log("Payload Size:",
-      JSON.stringify(data).length
-    );
-
-    /* ===== DATABASE ===== */
+    /* FIREBASE */
 
     setStatus("Uploading to database...");
 
-    await addDoc(collection(db, "logs"), data);
+    await addDoc(collection(db,"logs"), data);
 
-    await addDoc(collection(db, "alerts"), data);
+    await addDoc(collection(db,"alerts"), data);
 
-    /* ===== SUCCESS ===== */
+    /* SUCCESS */
 
     setStatus("Entry Recorded ✔");
 
@@ -327,11 +385,11 @@ async function scan(){
 
   }catch(err){
 
-    console.error("FULL ERROR:", err);
+    console.error(err);
 
     setStatus("Error uploading data ❌");
 
-    alert("Upload failed: " + err.message);
+    alert(err.message);
 
     await stopCam();
   }
