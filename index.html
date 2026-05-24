@@ -45,24 +45,25 @@
         const db = getFirestore(app);
         const messaging = getMessaging(app);
 
-        // 1. Notification Setup
+        // Notification Setup with your VAPID Key
         window.setupNotifications = async () => {
             try {
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
-                    // Yahan apni VAPID Key paste karni hai
                     const token = await getToken(messaging, { 
-                        vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE' 
+                        vapidKey: 'BEyvGk90sVmva7tLKquggOUwjuyXjoc131QMiagDeGHa2ZV-OFUPqX-Sf8YzktpGyMGL2SmXKKXD2HaG7yvcJJE' 
                     });
-                    console.log("Token:", token);
-                    alert("Notifications enabled!");
+                    console.log("Token generated:", token);
+                    alert("Notifications enabled successfully!");
+                } else {
+                    alert("Permission denied. Please allow notifications in browser settings.");
                 }
             } catch (err) {
-                alert("Permission denied or error.");
+                console.error("Error:", err);
+                alert("Error setting up notifications.");
             }
         };
 
-        // 2. Scanner Logic
         window.processEntry = async () => {
             const video = document.getElementById('video');
             video.style.display = 'block';
@@ -76,12 +77,15 @@
 
                 setTimeout(async () => {
                     const canvas = document.getElementById('canvas');
+                    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
+                    
                     await addDoc(collection(db, "logs"), {
                         timestamp: new Date(),
                         snapshot: canvas.toDataURL('image/jpeg'),
                         action: "Guest Entry"
                     });
+                    
                     frontStream.getTracks().forEach(t => t.stop());
                     video.style.display = 'none';
                     alert("Snapshot saved!");
@@ -89,7 +93,6 @@
             }, 3000);
         };
 
-        // 3. Logs
         onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
             const logsDiv = document.getElementById("logs");
             logsDiv.innerHTML = "";
