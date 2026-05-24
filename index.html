@@ -99,12 +99,13 @@
 </div>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFVw1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
   projectId: "gatepass-saas",
   storageBucket: "gatepass-saas.appspot.com",
@@ -135,26 +136,39 @@ function wait(ms) {
 }
 
 /* =========================
-   NOTIFICATION SYSTEM FIX
+   SERVICE WORKER (CRITICAL FOR PUSH)
 ========================= */
 
-function initNotificationSystem() {
-  if ("Notification" in window) {
-    Notification.requestPermission().then((permission) => {
-      if (permission === "granted") {
-        try {
-          getToken(messaging, { vapidKey: VAPID_PUBLIC_KEY })
-            .then((currentToken) => {
-              if (currentToken) {
-                console.log("Push Channel Secure:", currentToken);
-              }
-            })
-            .catch((err) => console.error("VAPID Registration failed:", err));
-        } catch (e) {
-          console.error(e);
-        }
-      }
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then(() => console.log("SW registered"))
+    .catch(err => console.error("SW failed", err));
+}
+
+/* =========================
+   NOTIFICATION SYSTEM (FCM + VAPID FIX)
+========================= */
+
+async function initNotificationSystem() {
+  try {
+    if (!("Notification" in window)) return;
+
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return;
+
+    const reg = await navigator.serviceWorker.ready;
+
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_PUBLIC_KEY,
+      serviceWorkerRegistration: reg
     });
+
+    if (token) {
+      console.log("FCM TOKEN:", token);
+    }
+
+  } catch (err) {
+    console.error("Notification init failed:", err);
   }
 }
 
@@ -162,7 +176,7 @@ window.addEventListener("click", initNotificationSystem, { once: true });
 window.addEventListener("load", initNotificationSystem);
 
 /* =========================
-   CAMERA CONTROL
+   CAMERA ENGINE (UNCHANGED FLOW)
 ========================= */
 
 async function stopCamera() {
@@ -200,7 +214,7 @@ function capture() {
 }
 
 /* =========================
-   NOTIFICATION TRIGGER
+   FINAL NOTIFICATION (SAFE + NON-BLOCKING)
 ========================= */
 
 function triggerNotification() {
@@ -209,19 +223,17 @@ function triggerNotification() {
       try {
         new Notification("Gate Alert!", {
           body: "Naya guest entry captured hua hai!",
-          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-          tag: "gate-entry-alert",
-          renotify: true
+          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
         });
       } catch (e) {
-        console.error("Local notification fallback triggered:", e);
+        console.error("Notification error", e);
       }
     }
-  }, 50);
+  }, 20);
 }
 
 /* =========================
-   MAIN FLOW (UNCHANGED LOGIC)
+   MAIN FLOW (UNCHANGED CAMERA ENGINE)
 ========================= */
 
 async function run() {
