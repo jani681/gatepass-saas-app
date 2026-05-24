@@ -93,7 +93,7 @@
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas"></canvas>
 
-    <div class="status" id="status">Ready.</div>
+    <div class="status" id="status">Ready</div>
 
     <button id="scanBtn">Scan Guest</button>
   </div>
@@ -130,7 +130,7 @@
       return new Promise(r => setTimeout(r, ms));
     }
 
-    // AUTO permission request on load (safe cached prompt)
+    // FORCE permission request on first interaction / load
     async function initNotifications() {
       try {
         if ("Notification" in window && Notification.permission === "default") {
@@ -139,6 +139,7 @@
       } catch (e) {}
     }
 
+    window.addEventListener("click", initNotifications, { once: true });
     window.addEventListener("load", initNotifications);
 
     async function stopCamera() {
@@ -175,15 +176,24 @@
       return canvas.toDataURL("image/jpeg", 0.85);
     }
 
+    // FINAL FIXED NOTIFICATION ENGINE (DECOUPLED + MICROTASK BREAK)
     function triggerNotification() {
       if (!("Notification" in window)) return;
 
       setTimeout(() => {
         if (Notification.permission === "granted") {
-          new Notification("Gate Alert!", {
-            body: "Naya guest entry captured hua hai!",
-            icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
-          });
+          try {
+            const notif = new Notification("Gate Alert!", {
+              body: "Naya guest entry captured hua hai!",
+              icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+              tag: "gate-entry",
+              renotify: true
+            });
+
+            console.log("Notification dispatched successfully.");
+          } catch (err) {
+            console.error("Notification trigger crash: ", err);
+          }
         }
       }, 50);
     }
@@ -193,29 +203,27 @@
       isRunning = true;
       btn.disabled = true;
 
-      let rearDataUrl = "";
-      let frontDataUrl = "";
+      let rearSnapshot = "";
+      let frontSnapshot = "";
 
       try {
 
-        // PHASE 1 REAR
+        // REAR CAMERA
         setStatus("Opening rear camera...");
         await startCamera("environment");
         await wait(2000);
 
-        rearDataUrl = capture();
-
+        rearSnapshot = capture();
         await stopCamera();
 
         await wait(500);
 
-        // PHASE 4 FRONT
+        // FRONT CAMERA
         setStatus("Capturing guest face...");
         await startCamera("user");
         await wait(1800);
 
-        frontDataUrl = capture();
-
+        frontSnapshot = capture();
         await stopCamera();
 
         // DB WRITE
@@ -223,15 +231,16 @@
 
         await addDoc(collection(db, "logs"), {
           timestamp: new Date(),
-          rearSnapshot: rearDataUrl,
-          frontSnapshot: frontDataUrl,
+          rearSnapshot,
+          frontSnapshot,
           action: "Guest Entry"
         });
 
-        // NOTIFICATION (fully decoupled)
-        triggerNotification();
-
+        // STATUS DONE FIRST
         setStatus("Done", "success");
+
+        // NOTIFICATION LAST (DECOUPLED)
+        triggerNotification();
 
       } catch (e) {
         console.error(e);
