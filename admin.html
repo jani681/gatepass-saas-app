@@ -1,71 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Aaryan House Admin Panel</title>
+<title>Aaryan House Security</title>
 
 <style>
-body{
+
+*{
   margin:0;
+  padding:0;
+  box-sizing:border-box;
   font-family:system-ui;
+}
+
+body{
   background:#0B1220;
   color:white;
 }
 
 .header{
-  padding:16px;
+  padding:18px;
   text-align:center;
   background:#111A2E;
-  font-size:18px;
-  font-weight:700;
+  box-shadow:0 5px 20px rgba(0,0,0,0.3);
 }
 
-.sub{
-  text-align:center;
+.header h1{
+  font-size:22px;
+}
+
+.header p{
   color:#94A3B8;
-  font-size:12px;
-  margin-top:-10px;
-  margin-bottom:10px;
+  font-size:13px;
+  margin-top:4px;
 }
 
-.container{
-  padding:12px;
+.dashboard{
+  padding:14px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.stat-card{
+  background:#111A2E;
+  padding:16px;
+  border-radius:16px;
+  text-align:center;
+  box-shadow:0 10px 25px rgba(0,0,0,0.25);
+}
+
+.stat-card h2{
+  font-size:24px;
+  margin-bottom:4px;
+}
+
+.stat-card p{
+  font-size:12px;
+  color:#94A3B8;
+}
+
+.search-box{
+  margin-bottom:16px;
+}
+
+.search-box input{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#111A2E;
+  color:white;
+  font-size:14px;
+}
+
+.feed{
   display:flex;
   flex-direction:column;
-  gap:12px;
+  gap:14px;
 }
 
 .card{
   background:#111A2E;
-  border-radius:14px;
-  padding:12px;
-  display:flex;
-  gap:12px;
-  align-items:center;
+  border-radius:18px;
+  overflow:hidden;
   box-shadow:0 10px 25px rgba(0,0,0,0.3);
 }
 
-img{
-  width:70px;
-  height:70px;
-  border-radius:10px;
+.card img{
+  width:100%;
+  height:220px;
   object-fit:cover;
-  background:#000;
+  background:black;
+}
+
+.info{
+  padding:14px;
+}
+
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .badge{
-  display:inline-block;
-  padding:3px 10px;
-  background:#3B82F6;
-  border-radius:20px;
+  padding:6px 12px;
+  border-radius:999px;
   font-size:12px;
-  margin-top:4px;
+  font-weight:600;
 }
 
-.time{
-  font-size:12px;
+.unknown{
+  background:#EF4444;
+}
+
+.known{
+  background:#22C55E;
+}
+
+.delivery{
+  background:#F59E0B;
+}
+
+.staff{
+  background:#3B82F6;
+}
+
+.meta{
+  margin-top:10px;
   color:#94A3B8;
+  font-size:13px;
+  line-height:1.7;
 }
 
 .empty{
@@ -73,30 +144,69 @@ img{
   margin-top:40px;
   color:#94A3B8;
 }
+
 </style>
 </head>
 
 <body>
 
-<div class="header">🏠 Aaryan House Security</div>
-<div class="sub">Live Admin Dashboard + Smart Alerts</div>
+<div class="header">
+  <h1>🏠 Aaryan House Security</h1>
+  <p>Smart AI Security Dashboard</p>
+</div>
 
-<div class="container" id="list">
-  <div class="empty">Waiting for guest activity...</div>
+<div class="dashboard">
+
+  <!-- STATS -->
+  <div class="stats">
+
+    <div class="stat-card">
+      <h2 id="totalCount">0</h2>
+      <p>Total Entries</p>
+    </div>
+
+    <div class="stat-card">
+      <h2 id="unknownCount">0</h2>
+      <p>Unknown Visitors</p>
+    </div>
+
+    <div class="stat-card">
+      <h2 id="gate1Count">0</h2>
+      <p>Gate 1</p>
+    </div>
+
+    <div class="stat-card">
+      <h2 id="gate2Count">0</h2>
+      <p>Gate 2</p>
+    </div>
+
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-box">
+    <input id="searchInput" type="text" placeholder="Search gate, type or time..." />
+  </div>
+
+  <!-- FEED -->
+  <div class="feed" id="feed">
+    <div class="empty">Waiting for activity...</div>
+  </div>
+
 </div>
 
 <script type="module">
 
-/* ================= FIREBASE CORE ================= */
+/* ================= FIREBASE ================= */
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy } 
+
+import {
+  getFirestore,
+  collection,
+  onSnapshot,
+  query
+}
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-/* ================= PUSH NOTIFICATIONS ================= */
-
-import { getMessaging, getToken, onMessage } 
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 /* ================= CONFIG ================= */
 
@@ -109,105 +219,132 @@ const firebaseConfig = {
   appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
 };
 
-const VAPID_KEY =
-"BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
-
-/* ================= INIT ================= */
-
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const messaging = getMessaging(app);
 
-const list = document.getElementById("list");
+/* ================= UI ================= */
 
-/* ================= SAFE TIME ================= */
+const feed = document.getElementById("feed");
+const searchInput = document.getElementById("searchInput");
 
-function safeTime(t){
-  try{
-    return new Date(t).toLocaleString();
-  }catch(e){
-    return "Unknown time";
-  }
+const totalCount = document.getElementById("totalCount");
+const unknownCount = document.getElementById("unknownCount");
+const gate1Count = document.getElementById("gate1Count");
+const gate2Count = document.getElementById("gate2Count");
+
+/* ================= DATA ================= */
+
+let allEntries = [];
+
+/* ================= BADGE ================= */
+
+function badgeClass(type){
+
+  if(type === "known") return "known";
+  if(type === "delivery") return "delivery";
+  if(type === "staff") return "staff";
+
+  return "unknown";
 }
 
-/* ================= LIVE FIRESTORE ================= */
+/* ================= RENDER ================= */
 
-const q = query(collection(db,"alerts"));
+function render(data){
 
-onSnapshot(q,(snapshot)=>{
+  feed.innerHTML = "";
 
-  list.innerHTML = "";
-
-  if(snapshot.empty){
-    list.innerHTML = `<div class="empty">No guest entries yet</div>`;
+  if(data.length === 0){
+    feed.innerHTML = `<div class="empty">No matching results</div>`;
     return;
   }
 
-  snapshot.forEach(doc=>{
-    const d = doc.data();
+  data.reverse().forEach(item=>{
 
     const card = document.createElement("div");
     card.className = "card";
 
     card.innerHTML = `
-      <img src="${d.frontSnapshot || ''}" />
-      <div>
-        <div><b>Guest Entry</b></div>
-        <div class="badge">${d.gateId || "Unknown Gate"}</div>
-        <div class="time">${safeTime(d.timestamp)}</div>
+      <img src="${item.frontSnapshot || ""}" />
+
+      <div class="info">
+
+        <div class="top">
+          <h3>${item.gateId || "Unknown Gate"}</h3>
+
+          <div class="badge ${badgeClass(item.visitorType)}">
+            ${item.visitorType || "unknown"}
+          </div>
+        </div>
+
+        <div class="meta">
+          ⏱ ${new Date(item.timestamp).toLocaleString()}<br>
+          📷 Device: ${item.device || "gate-device"}<br>
+          📌 Status: ${item.status || "new"}<br>
+          🧠 Confidence: ${item.confidence || 0}
+        </div>
+
       </div>
     `;
 
-    list.appendChild(card);
+    feed.appendChild(card);
+
   });
 
-});
-
-/* ================= PUSH SYSTEM ================= */
-
-let swReg = null;
-
-async function initPush(){
-
-  try{
-
-    swReg = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-
-    const permission = await Notification.requestPermission();
-    if(permission !== "granted") return;
-
-    const token = await getToken(messaging,{
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: swReg
-    });
-
-    console.log("🔥 FCM TOKEN:");
-    console.log(token);
-
-  }catch(e){
-    console.error("Push init failed:",e);
-  }
 }
 
-/* ================= FOREGROUND NOTIFICATIONS ================= */
+/* ================= ANALYTICS ================= */
 
-onMessage(messaging,(payload)=>{
+function updateStats(data){
 
-  try{
-    new Notification("🚪 Gate Alert!",{
-      body: payload?.data?.body || "New guest detected",
-      icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-      vibrate:[200,100,200]
-    });
-  }catch(e){
-    console.error("Notification error:",e);
-  }
+  totalCount.innerText = data.length;
+
+  unknownCount.innerText =
+    data.filter(i => i.visitorType === "unknown").length;
+
+  gate1Count.innerText =
+    data.filter(i => i.gateId === "Gate 1").length;
+
+  gate2Count.innerText =
+    data.filter(i => i.gateId === "Gate 2").length;
+}
+
+/* ================= SEARCH ================= */
+
+searchInput.addEventListener("input", ()=>{
+
+  const q = searchInput.value.toLowerCase();
+
+  const filtered = allEntries.filter(item => {
+
+    return (
+      (item.gateId || "").toLowerCase().includes(q) ||
+      (item.visitorType || "").toLowerCase().includes(q) ||
+      (item.timestamp || "").toLowerCase().includes(q)
+    );
+
+  });
+
+  render(filtered);
 
 });
 
-/* ================= AUTO INIT ================= */
+/* ================= LIVE LISTENER ================= */
 
-window.addEventListener("click", initPush, { once:true });
+const q = query(collection(db,"alerts"));
+
+onSnapshot(q,(snap)=>{
+
+  allEntries = [];
+
+  snap.forEach(doc=>{
+    allEntries.push(doc.data());
+  });
+
+  updateStats(allEntries);
+
+  render([...allEntries]);
+
+});
 
 </script>
 
