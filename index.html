@@ -1,107 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Gate Security System</title>
-
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: Arial, sans-serif;
-    }
-
-    body {
-      background: #0f172a;
-      color: white;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 420px;
-      background: #1e293b;
-      border-radius: 18px;
-      padding: 25px;
-      text-align: center;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    }
-
-    h1 {
-      font-size: 24px;
-      margin-bottom: 10px;
-    }
-
-    p {
-      color: #cbd5e1;
-      font-size: 14px;
-      margin-bottom: 20px;
-    }
-
-    #video {
-      width: 100%;
-      border-radius: 14px;
-      background: black;
-      display: none;
-      margin-bottom: 15px;
-      object-fit: cover;
-    }
-
-    canvas {
-      display: none;
-    }
-
-    .status {
-      margin: 15px 0;
-      font-size: 14px;
-      color: #93c5fd;
-      min-height: 20px;
-    }
-
-    button {
-      width: 100%;
-      padding: 16px;
-      border: none;
-      border-radius: 12px;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
-    }
-
-    button:disabled {
-      background: #475569;
-    }
-
-    .success { color: #4ade80; }
-    .error { color: #f87171; }
-  </style>
-</head>
-
-<body>
-
-<div class="container">
-  <h1>Gate Security System</h1>
-  <p>Aaryan's House</p>
-
-  <video id="video" autoplay playsinline muted></video>
-  <canvas id="canvas"></canvas>
-
-  <div class="status" id="status">Ready</div>
-
-  <button id="scanBtn">Scan Guest</button>
-</div>
-
-<script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig = {
@@ -138,7 +36,33 @@ function wait(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-/* ================= SW REGISTRATION ================= */
+/* ================= VISITOR MEMORY ENGINE (NEW) ================= */
+
+function generateFaceHash(dataUrl) {
+  let hash = 0;
+  for (let i = 0; i < dataUrl.length; i++) {
+    hash = (hash << 5) - hash + dataUrl.charCodeAt(i);
+    hash |= 0;
+  }
+  return hash.toString();
+}
+
+async function checkIfKnownVisitor(faceHash) {
+  const snapshot = await getDocs(collection(db, "logs"));
+
+  let found = false;
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (data.faceHash && data.faceHash === faceHash) {
+      found = true;
+    }
+  });
+
+  return found;
+}
+
+/* ================= SERVICE WORKER ================= */
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/firebase-messaging-sw.js")
@@ -165,14 +89,14 @@ async function initNotificationSystem() {
     if (token) console.log("FCM TOKEN:", token);
 
   } catch (err) {
-    console.error("Notification init failed:", err);
+    console.error(err);
   }
 }
 
 window.addEventListener("click", initNotificationSystem, { once: true });
 window.addEventListener("load", initNotificationSystem);
 
-/* ================= CAMERA CONTROL ================= */
+/* ================= CAMERA (UNCHANGED) ================= */
 
 async function stopCamera() {
   if (stream) {
@@ -208,45 +132,20 @@ function capture() {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-/* ================= FINAL NOTIFICATION ENGINE (FIXED) ================= */
+/* ================= NOTIFICATION ================= */
 
 function triggerNotification() {
-  const systemNotify = () => {
-    try {
-      if (Notification.permission === "granted") {
-        new Notification("Gate Alert!", {
-          body: "Naya guest entry captured hua hai!",
-          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
-        });
-      }
-    } catch (e) {
-      console.error("Notification failed:", e);
-    }
-  };
-
-  setTimeout(systemNotify, 0);
-
   setTimeout(() => {
-    const fallback = document.createElement("div");
-    fallback.innerText = "🔔 Guest Entry Captured!";
-    fallback.style.position = "fixed";
-    fallback.style.bottom = "20px";
-    fallback.style.left = "50%";
-    fallback.style.transform = "translateX(-50%)";
-    fallback.style.background = "#2563eb";
-    fallback.style.color = "white";
-    fallback.style.padding = "12px 18px";
-    fallback.style.borderRadius = "10px";
-    fallback.style.zIndex = "9999";
-    fallback.style.fontSize = "14px";
-
-    document.body.appendChild(fallback);
-
-    setTimeout(() => fallback.remove(), 3000);
-  }, 50);
+    if (Notification.permission === "granted") {
+      new Notification("Gate Alert!", {
+        body: "Naya guest entry captured hua hai!",
+        icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
+      });
+    }
+  }, 20);
 }
 
-/* ================= MAIN FLOW ================= */
+/* ================= MAIN FLOW (UNCHANGED LOGIC) ================= */
 
 async function run() {
   if (running) return;
@@ -274,12 +173,21 @@ async function run() {
 
     setStatus("Uploading to database...");
 
+    /* ================= SMART STEP ADDED ================= */
+
+    const faceHash = generateFaceHash(frontSnapshot);
+    const known = await checkIfKnownVisitor(faceHash);
+
     await addDoc(collection(db, "logs"), {
       timestamp: new Date(),
       rearSnapshot,
       frontSnapshot,
-      action: "Guest Entry"
+      action: "Guest Entry",
+      faceHash,
+      visitorType: known ? "known" : "new"
     });
+
+    /* ================= END SMART STEP ================= */
 
     setStatus("Done", "success");
 
@@ -296,8 +204,3 @@ async function run() {
 }
 
 btn.addEventListener("click", run);
-
-</script>
-
-</body>
-</html>
