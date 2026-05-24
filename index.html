@@ -6,9 +6,15 @@
 <title>Gate Device - Aaryan House</title>
 
 <style>
-body{
+
+*{
   margin:0;
+  padding:0;
+  box-sizing:border-box;
   font-family:system-ui;
+}
+
+body{
   background:#0B1220;
   color:white;
   display:flex;
@@ -23,36 +29,64 @@ body{
 
 .card{
   background:#111A2E;
-  border-radius:16px;
+  border-radius:18px;
   padding:16px;
   margin-top:20px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.4);
+  box-shadow:0 10px 25px rgba(0,0,0,0.35);
+}
+
+h2{
+  font-size:24px;
+}
+
+.sub{
+  color:#94A3B8;
+  margin-top:4px;
+  font-size:13px;
 }
 
 video{
   width:100%;
   border-radius:14px;
   background:black;
+  margin-top:10px;
 }
 
 button{
   width:100%;
-  margin-top:12px;
-  padding:14px;
+  margin-top:14px;
+  padding:16px;
   border:none;
-  border-radius:12px;
+  border-radius:14px;
   background:#3B82F6;
   color:white;
   font-size:16px;
-  font-weight:600;
+  font-weight:700;
+  cursor:pointer;
+}
+
+button:disabled{
+  opacity:0.7;
 }
 
 .status{
-  margin-top:10px;
+  margin-top:14px;
   text-align:center;
   font-size:13px;
   color:#94A3B8;
+  min-height:20px;
 }
+
+.gate-badge{
+  margin-top:12px;
+  display:inline-block;
+  padding:6px 12px;
+  background:#1E293B;
+  border-radius:999px;
+  font-size:12px;
+  color:#93C5FD;
+}
+
 </style>
 </head>
 
@@ -61,14 +95,29 @@ button{
 <div class="app">
 
   <h2>🚪 Gate Scanner</h2>
-  <p style="color:#94A3B8;font-size:13px;">Aaryan's House Security System</p>
+
+  <div class="sub">
+    Aaryan's House Security System
+  </div>
+
+  <div class="gate-badge" id="gateLabel">
+    Detecting Gate...
+  </div>
 
   <div class="card">
-    <video id="video" autoplay playsinline></video>
+
+    <video id="video" autoplay playsinline muted></video>
+
     <canvas id="canvas" style="display:none;"></canvas>
 
-    <button id="scanBtn">Scan Guest</button>
-    <div class="status" id="status">Ready</div>
+    <button id="scanBtn">
+      Scan Guest
+    </button>
+
+    <div class="status" id="status">
+      Ready
+    </div>
+
   </div>
 
 </div>
@@ -77,8 +126,14 @@ button{
 
 /* ================= FIREBASE ================= */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc } 
+import { initializeApp }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  addDoc
+}
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ================= CONFIG ================= */
@@ -101,6 +156,7 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const btn = document.getElementById("scanBtn");
 const status = document.getElementById("status");
+const gateLabel = document.getElementById("gateLabel");
 
 /* ================= STATE ================= */
 
@@ -109,28 +165,39 @@ let running = false;
 
 /* ================= HELPERS ================= */
 
-const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
+const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-function setStatus(t){
-  status.textContent = t;
+function setStatus(text){
+  status.innerText = text;
 }
 
-/* ================= GATE ID ================= */
+/* ================= GATE DETECTION ================= */
 
 function getGateId(){
-  const g = new URLSearchParams(location.search).get("gate");
-  if(g==="1") return "Gate 1";
-  if(g==="2") return "Gate 2";
+
+  const gate = new URLSearchParams(location.search).get("gate");
+
+  if(gate === "1") return "Gate 1";
+  if(gate === "2") return "Gate 2";
+
   return "Unknown Gate";
 }
 
-/* ================= CAMERA CONTROL ================= */
+const CURRENT_GATE = getGateId();
+
+gateLabel.innerText = CURRENT_GATE;
+
+/* ================= CAMERA ================= */
 
 async function stopCam(){
+
   if(stream){
-    stream.getTracks().forEach(t=>t.stop());
+    stream.getTracks().forEach(track => track.stop());
   }
+
   stream = null;
+
+  video.pause();
   video.srcObject = null;
 }
 
@@ -139,96 +206,121 @@ async function startCam(mode){
   await stopCam();
 
   stream = await navigator.mediaDevices.getUserMedia({
-    video:{ facingMode:{ ideal: mode } },
+    video:{
+      facingMode:{
+        ideal: mode
+      }
+    },
     audio:false
   });
 
   video.srcObject = stream;
+
   await video.play();
-  await wait(200);
+
+  await wait(250);
 }
+
+/* ================= FIXED COMPRESSED CAPTURE ================= */
 
 function capture(){
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video,0,0);
-  return canvas.toDataURL("image/jpeg",0.85);
+
+  const ctx = canvas.getContext("2d");
+
+  /* Firebase-safe resolution */
+  const width = 480;
+  const height = 360;
+
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.drawImage(video, 0, 0, width, height);
+
+  /* Strong compression */
+  return canvas.toDataURL("image/jpeg", 0.45);
 }
 
-/* ================= STEP 6 SCAN ENGINE ================= */
+/* ================= MAIN SCAN ENGINE ================= */
 
 async function scan(){
 
   if(running) return;
+
   running = true;
   btn.disabled = true;
 
   try{
 
-    const gateId = getGateId();
+    /* ================= REAR CAMERA ================= */
 
-    /* ===== REAR CAMERA ===== */
     setStatus("Opening rear camera...");
+
     await startCam("environment");
 
     await wait(2000);
 
-    const rearSnap = capture();
+    const rearSnapshot = capture();
 
     await stopCam();
-    await wait(400);
 
-    /* ===== FRONT CAMERA ===== */
+    await wait(500);
+
+    /* ================= FRONT CAMERA ================= */
+
     setStatus("Capturing guest face...");
+
     await startCam("user");
 
     await wait(1800);
 
-    const frontSnap = capture();
+    const frontSnapshot = capture();
 
     await stopCam();
 
-    /* ===== SMART DATA STRUCTURE ===== */
+    /* ================= DATA ================= */
 
     const data = {
-      timestamp: new Date().toISOString(),
-      gateId: gateId,
 
-      rearSnapshot: rearSnap,
-      frontSnapshot: frontSnap,
+      timestamp: new Date().toISOString(),
+
+      gateId: CURRENT_GATE,
+
+      rearSnapshot,
+      frontSnapshot,
 
       action: "Guest Entry",
 
-      /* 🧠 STEP 6 INTELLIGENCE LAYER */
+      /* STEP 6 SMART LAYER */
       visitorType: "unknown",
       confidence: 0,
-      device: "gate-device",
-      status: "new"
+      status: "new",
+      device: "gate-device"
+
     };
 
-    /* ===== UI UPDATE ===== */
+    /* ================= FIREBASE WRITE ================= */
 
     setStatus("Uploading to database...");
 
-    /* ===== FIREBASE WRITE ===== */
+    await addDoc(collection(db, "logs"), data);
 
-    await addDoc(collection(db,"logs"), data);
-    await addDoc(collection(db,"alerts"), data);
+    await addDoc(collection(db, "alerts"), data);
+
+    /* ================= SUCCESS ================= */
 
     setStatus("Entry Recorded ✔");
 
-    console.log("🧠 Smart Entry:", data);
+    console.log("✅ Uploaded:", data);
 
     alert("Guest captured successfully");
 
-  }catch(e){
+  }catch(err){
 
-    console.error("ERROR:", e);
+    console.error("SCAN ERROR:", err);
 
-    setStatus("Error ❌");
+    setStatus("Error uploading data ❌");
 
     await stopCam();
-
   }
 
   running = false;
