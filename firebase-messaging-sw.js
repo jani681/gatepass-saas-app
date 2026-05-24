@@ -1,6 +1,8 @@
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
+/* ================= FIREBASE INIT ================= */
+
 firebase.initializeApp({
   apiKey: "AIzaSyBuYYn6V3jqUs47fnVFvW1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
@@ -12,11 +14,43 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-/* Background notification handler */
+/* ================= BACKGROUND NOTIFICATION ================= */
+
 messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification("Gate Alert!", {
-    body: payload.data?.body || "New guest detected",
-    icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-    vibrate: [200,100,200]
+
+  console.log("📩 Background message received:", payload);
+
+  const title = payload?.notification?.title || "🚪 Gate Alert!";
+  const body = payload?.notification?.body || "New guest detected at gate";
+  const icon = payload?.notification?.icon || "https://cdn-icons-png.flaticon.com/512/6195/6195700.png";
+
+  self.registration.showNotification(title, {
+    body: body,
+    icon: icon,
+    badge: icon,
+    vibrate: [200, 100, 200],
+    tag: "gate-alert",
+    renotify: true,
+    requireInteraction: true,
+    data: payload?.data || {}
   });
+});
+
+/* ================= CLICK ACTION ================= */
+
+self.addEventListener("notificationclick", function(event) {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(function(clientList) {
+      for (let client of clientList) {
+        if (client.url && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow("/");
+      }
+    })
+  );
 });
