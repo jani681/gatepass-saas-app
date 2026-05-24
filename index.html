@@ -8,20 +8,20 @@
         :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 400px; margin: auto; }
-        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
-        .card { background: white; padding: 20px; border-radius: 20px; margin-top: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .log-item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; cursor: pointer; margin-bottom: 20px; }
+        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .log-item { padding: 12px 0; border-bottom: 1px solid #f1f5f9; font-size: 0.95rem; color: #475569; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>Aaryan's House</h1>
-        <button class="btn" onclick="ringBell()">🔔 RING BELL</button>
-        <p id="status" style="margin-top:10px;">Ready</p>
+        <button class="btn" id="ringBtn" onclick="ringBell()">🔔 RING BELL</button>
+        <p id="status" style="margin-bottom:20px;">Ready</p>
 
         <div class="card">
-            <h3>Recent Visitors</h3>
+            <h3 style="margin-top:0;">Recent Visitors</h3>
             <div id="logs">Loading...</div>
         </div>
     </div>
@@ -38,30 +38,48 @@
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
+        
         const db = getFirestore(initializeApp(firebaseConfig));
 
+        // Ring Bell Function
         window.ringBell = async () => {
-            document.getElementById('status').innerText = "Ringing...";
+            const btn = document.getElementById('ringBtn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            status.innerText = "Ringing...";
+            
             try {
                 await addDoc(collection(db, "logs"), { 
                     timestamp: serverTimestamp(),
                     action: "Visitor Ring" 
                 });
-                document.getElementById('status').innerText = "Sent!";
-                setTimeout(() => document.getElementById('status').innerText = "Ready", 2000);
+                status.innerText = "Sent!";
+                setTimeout(() => { status.innerText = "Ready"; btn.disabled = false; }, 2000);
             } catch (e) {
-                document.getElementById('status').innerText = "Error!";
+                status.innerText = "Error!";
+                btn.disabled = false;
             }
         };
 
+        // Live Logs Display
         onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
             const logsDiv = document.getElementById("logs");
             logsDiv.innerHTML = "";
+            
+            if (snap.empty) {
+                logsDiv.innerHTML = "<p>No visitors yet.</p>";
+                return;
+            }
+
             snap.forEach(doc => {
                 const data = doc.data();
-                // Date check: agar timestamp valid hai toh show karo
-                const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : "Just now";
-                logsDiv.innerHTML += `<div class="log-item">${date} - Visitor Arrived</div>`;
+                // Check if timestamp exists and is a valid Firestore Timestamp
+                let timeStr = "Recent";
+                if (data.timestamp && typeof data.timestamp.toDate === 'function') {
+                    timeStr = data.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                
+                logsDiv.innerHTML += `<div class="log-item"><b>${timeStr}</b> - Visitor Arrived</div>`;
             });
         });
     </script>
