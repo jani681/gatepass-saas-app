@@ -16,6 +16,7 @@
 
     <div class="card">
         <h1>Aaryan's House</h1>
+        <button class="btn" onclick="setupNotifications()">ENABLE NOTIFICATIONS</button>
         <button class="btn" id="startBtn" onclick="processEntry()">START SCANNING</button>
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas" style="display:none;"></canvas>
@@ -44,39 +45,43 @@
         const db = getFirestore(app);
         const messaging = getMessaging(app);
 
-        // Service Worker Registration for Notifications
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('firebase-messaging-sw.js')
-            .then(reg => console.log('SW Registered', reg));
-        }
+        // 1. Notification Setup
+        window.setupNotifications = async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // Yahan apni VAPID Key paste karni hai
+                    const token = await getToken(messaging, { 
+                        vapidKey: 'YOUR_VAPID_KEY_FROM_FIREBASE_CONSOLE' 
+                    });
+                    console.log("Token:", token);
+                    alert("Notifications enabled!");
+                }
+            } catch (err) {
+                alert("Permission denied or error.");
+            }
+        };
 
+        // 2. Scanner Logic
         window.processEntry = async () => {
             const video = document.getElementById('video');
             video.style.display = 'block';
-            
-            // 1. Rear Camera for Scanning
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             video.srcObject = stream;
             
             setTimeout(async () => {
                 stream.getTracks().forEach(t => t.stop());
-                
-                // 2. Front Camera for Snapshot
                 const frontStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = frontStream;
 
                 setTimeout(async () => {
                     const canvas = document.getElementById('canvas');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
                     canvas.getContext('2d').drawImage(video, 0, 0);
-                    
                     await addDoc(collection(db, "logs"), {
                         timestamp: new Date(),
                         snapshot: canvas.toDataURL('image/jpeg'),
-                        action: "Guest Entry - Verified"
+                        action: "Guest Entry"
                     });
-                    
                     frontStream.getTracks().forEach(t => t.stop());
                     video.style.display = 'none';
                     alert("Snapshot saved!");
@@ -84,7 +89,7 @@
             }, 3000);
         };
 
-        // Real-time Logs
+        // 3. Logs
         onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
             const logsDiv = document.getElementById("logs");
             logsDiv.innerHTML = "";
