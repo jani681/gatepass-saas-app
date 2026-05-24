@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Home Security Dashboard</title>
+<title>Gate Device - Aaryan House</title>
 
 <style>
 body{
@@ -11,80 +11,72 @@ body{
   font-family:system-ui;
   background:#0B1220;
   color:white;
-}
-
-.header{
-  padding:16px;
-  background:#111A2E;
-  text-align:center;
-  font-weight:700;
-  font-size:18px;
-}
-
-.container{
-  padding:14px;
   display:flex;
-  flex-direction:column;
-  gap:12px;
+  justify-content:center;
+}
+
+.app{
+  width:100%;
+  max-width:420px;
+  padding:16px;
 }
 
 .card{
   background:#111A2E;
   border-radius:16px;
-  padding:12px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+  padding:16px;
+  margin-top:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.4);
 }
 
-.row{
-  display:flex;
-  gap:12px;
-  align-items:center;
+video{
+  width:100%;
+  border-radius:14px;
+  background:black;
 }
 
-img{
-  width:80px;
-  height:80px;
+button{
+  width:100%;
+  margin-top:12px;
+  padding:14px;
+  border:none;
   border-radius:12px;
-  object-fit:cover;
-  background:#000;
-}
-
-.badge{
-  display:inline-block;
-  padding:4px 10px;
   background:#3B82F6;
-  border-radius:20px;
-  font-size:12px;
-  margin-top:6px;
+  color:white;
+  font-size:16px;
+  font-weight:600;
 }
 
-.time{
-  font-size:12px;
-  color:#94A3B8;
-}
-
-.empty{
+.status{
+  margin-top:10px;
   text-align:center;
+  font-size:13px;
   color:#94A3B8;
-  margin-top:50px;
 }
 </style>
 </head>
 
 <body>
 
-<div class="header">
-🏠 Aaryan's House - Live Security Monitor
-</div>
+<div class="app">
 
-<div class="container" id="list">
-  <div class="empty">Waiting for guest alerts...</div>
+  <h2>🚪 Gate Scanner</h2>
+  <p style="color:#94A3B8;font-size:13px;">Aaryan's House Security System</p>
+
+  <div class="card">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <button id="scanBtn">Scan Guest</button>
+    <div class="status" id="status">Ready</div>
+  </div>
+
 </div>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, query, orderBy } 
+import { getFirestore, collection, addDoc } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ================= FIREBASE ================= */
@@ -101,42 +93,134 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-const list = document.getElementById("list");
+/* ================= UI ================= */
 
-/* ================= LIVE LISTENER ================= */
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const btn = document.getElementById("scanBtn");
+const status = document.getElementById("status");
 
-const q = query(collection(db, "alerts"));
+let stream = null;
+let running = false;
 
-onSnapshot(q, (snapshot) => {
+/* ================= HELPERS ================= */
 
-  list.innerHTML = "";
+const wait = (ms)=>new Promise(r=>setTimeout(r,ms));
 
-  if(snapshot.empty){
-    list.innerHTML = `<div class="empty">No alerts yet</div>`;
-    return;
+function setStatus(t){
+  status.textContent = t;
+}
+
+/* ================= GATE ID ================= */
+
+function getGateId(){
+  const g = new URLSearchParams(location.search).get("gate");
+  if(g==="1") return "Gate 1";
+  if(g==="2") return "Gate 2";
+  return "Unknown Gate";
+}
+
+/* ================= CAMERA ================= */
+
+async function stopCam(){
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
   }
+  stream = null;
+  video.srcObject = null;
+}
 
-  snapshot.forEach((doc) => {
-    const d = doc.data();
+async function startCam(mode){
+  await stopCam();
 
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-      <div class="row">
-        <img src="${d.frontSnapshot}" />
-        <div>
-          <div><b>Guest Entry</b></div>
-          <div class="badge">${d.gateId}</div>
-          <div class="time">${new Date(d.timestamp).toLocaleString()}</div>
-        </div>
-      </div>
-    `;
-
-    list.appendChild(card);
+  stream = await navigator.mediaDevices.getUserMedia({
+    video:{ facingMode:{ ideal: mode } },
+    audio:false
   });
 
-});
+  video.srcObject = stream;
+  await video.play();
+  await wait(200);
+
+  return video;
+}
+
+function capture(){
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video,0,0);
+  return canvas.toDataURL("image/jpeg",0.85);
+}
+
+/* ================= SAFE FIREBASE ================= */
+
+async function safeWrite(path,data){
+  try{
+    await addDoc(collection(db,path),data);
+    console.log("✔ saved:",path);
+  }catch(e){
+    console.warn("Firebase error ignored:",e.message);
+  }
+}
+
+/* ================= MAIN FLOW ================= */
+
+async function scan(){
+
+  if(running) return;
+  running = true;
+  btn.disabled = true;
+
+  try{
+
+    const gateId = getGateId();
+
+    /* STEP 1 - REAR CAMERA */
+    setStatus("Opening rear camera...");
+    await startCam("environment");
+    await wait(2000);
+    const rearSnap = capture();
+
+    await stopCam();
+    await wait(300);
+
+    /* STEP 2 - FRONT CAMERA */
+    setStatus("Capturing face...");
+    await startCam("user");
+    await wait(1800);
+    const frontSnap = capture();
+
+    await stopCam();
+
+    /* STEP 3 - DATA */
+    const data = {
+      gateId,
+      timestamp: new Date().toISOString(),
+      rearSnapshot: rearSnap,
+      frontSnapshot: frontSnap,
+      action: "Guest Entry"
+    };
+
+    setStatus("Uploading...");
+
+    /* FIREBASE WRITE (NON BLOCKING SAFE) */
+    safeWrite("logs", data);
+    safeWrite("alerts", data);
+
+    setStatus("Done ✔");
+
+    alert("Guest captured successfully");
+
+  }catch(e){
+    console.error(e);
+    setStatus("Error ❌");
+  }
+
+  running = false;
+  btn.disabled = false;
+}
+
+btn.addEventListener("click",scan);
 
 </script>
 
