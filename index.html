@@ -75,11 +75,13 @@ button{
 
 <script type="module">
 
+/* ================= FIREBASE ================= */
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ================= FIREBASE ================= */
+/* ================= CONFIG ================= */
 
 const firebaseConfig = {
   apiKey: "AIzaSyBuYYn6V3jqUs47fnVFvW1OlCywfyDX6ix0",
@@ -99,6 +101,8 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const btn = document.getElementById("scanBtn");
 const status = document.getElementById("status");
+
+/* ================= STATE ================= */
 
 let stream = null;
 let running = false;
@@ -120,7 +124,7 @@ function getGateId(){
   return "Unknown Gate";
 }
 
-/* ================= CAMERA ================= */
+/* ================= CAMERA CONTROL ================= */
 
 async function stopCam(){
   if(stream){
@@ -131,6 +135,7 @@ async function stopCam(){
 }
 
 async function startCam(mode){
+
   await stopCam();
 
   stream = await navigator.mediaDevices.getUserMedia({
@@ -141,8 +146,6 @@ async function startCam(mode){
   video.srcObject = stream;
   await video.play();
   await wait(200);
-
-  return video;
 }
 
 function capture(){
@@ -152,18 +155,7 @@ function capture(){
   return canvas.toDataURL("image/jpeg",0.85);
 }
 
-/* ================= SAFE FIREBASE ================= */
-
-async function safeWrite(path,data){
-  try{
-    await addDoc(collection(db,path),data);
-    console.log("✔ saved:",path);
-  }catch(e){
-    console.warn("Firebase error ignored:",e.message);
-  }
-}
-
-/* ================= MAIN FLOW ================= */
+/* ================= STEP 6 SCAN ENGINE ================= */
 
 async function scan(){
 
@@ -175,52 +167,77 @@ async function scan(){
 
     const gateId = getGateId();
 
-    /* STEP 1 - REAR CAMERA */
+    /* ===== REAR CAMERA ===== */
     setStatus("Opening rear camera...");
     await startCam("environment");
+
     await wait(2000);
+
     const rearSnap = capture();
 
     await stopCam();
-    await wait(300);
+    await wait(400);
 
-    /* STEP 2 - FRONT CAMERA */
-    setStatus("Capturing face...");
+    /* ===== FRONT CAMERA ===== */
+    setStatus("Capturing guest face...");
     await startCam("user");
+
     await wait(1800);
+
     const frontSnap = capture();
 
     await stopCam();
 
-    /* STEP 3 - DATA */
+    /* ===== SMART DATA STRUCTURE ===== */
+
     const data = {
-      gateId,
       timestamp: new Date().toISOString(),
+      gateId: gateId,
+
       rearSnapshot: rearSnap,
       frontSnapshot: frontSnap,
-      action: "Guest Entry"
+
+      action: "Guest Entry",
+
+      /* 🧠 STEP 6 INTELLIGENCE LAYER */
+      visitorType: "unknown",
+      confidence: 0,
+      device: "gate-device",
+      status: "new"
     };
 
-    setStatus("Uploading...");
+    /* ===== UI UPDATE ===== */
 
-    /* FIREBASE WRITE (NON BLOCKING SAFE) */
-    safeWrite("logs", data);
-    safeWrite("alerts", data);
+    setStatus("Uploading to database...");
 
-    setStatus("Done ✔");
+    /* ===== FIREBASE WRITE ===== */
+
+    await addDoc(collection(db,"logs"), data);
+    await addDoc(collection(db,"alerts"), data);
+
+    setStatus("Entry Recorded ✔");
+
+    console.log("🧠 Smart Entry:", data);
 
     alert("Guest captured successfully");
 
   }catch(e){
-    console.error(e);
+
+    console.error("ERROR:", e);
+
     setStatus("Error ❌");
+
+    await stopCam();
+
   }
 
   running = false;
   btn.disabled = false;
 }
 
-btn.addEventListener("click",scan);
+/* ================= EVENT ================= */
+
+btn.addEventListener("click", scan);
 
 </script>
 
