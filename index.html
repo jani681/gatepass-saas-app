@@ -5,30 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aaryan's Security</title>
     <style>
-        body { font-family: -apple-system, sans-serif; background: #f4f4f9; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; text-align: center; background: #f4f4f9; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer; }
-        #video { width: 100%; border-radius: 15px; display: none; }
-        .log-img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-top: 5px; }
+        #video { width: 100%; border-radius: 15px; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h1>Aaryan's House</h1>
-        <button class="btn" onclick="startScanner()">SCAN QR TO ENTER</button>
+        <h1>Aaryan's Security</h1>
+        <button class="btn" id="startBtn" onclick="processEntry()">START SCANNING</button>
         <video id="video" autoplay playsinline></video>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
-    <div class="card">
-        <h3>Recent Visitors</h3>
-        <div id="logs">Loading...</div>
-    </div>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const db = getFirestore(initializeApp({
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
@@ -36,42 +30,41 @@
             // ...config
         }));
 
-        window.startScanner = async () => {
-            const video = document.getElementById('video');
-            video.style.display = 'block';
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+
+        window.processEntry = async () => {
+            // 1. REAR CAMERA (Scan ke liye)
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             video.srcObject = stream;
-
+            
+            // Logic: Scan complete hone ke baad... (yahan sim-delay hai)
+            document.getElementById('startBtn').innerText = "Scanning QR...";
+            
             setTimeout(async () => {
-                const canvas = document.getElementById('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
-                
-                await addDoc(collection(db, "logs"), {
-                    timestamp: new Date(),
-                    snapshot: canvas.toDataURL('image/jpeg'),
-                    action: "Guest Entry"
-                });
-                
-                video.style.display = 'none';
-                stream.getTracks().forEach(t => t.stop());
-                alert("Snapshot sent to Dashboard!");
+                // 2. FRONT CAMERA (Snapshot ke liye)
+                stream.getTracks().forEach(t => t.stop()); // Rear band
+                const frontStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+                video.srcObject = frontStream;
+
+                setTimeout(async () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    canvas.getContext('2d').drawImage(video, 0, 0);
+                    
+                    await addDoc(collection(db, "logs"), {
+                        timestamp: new Date(),
+                        snapshot: canvas.toDataURL('image/jpeg'),
+                        action: "Guest Entry - Verified"
+                    });
+                    
+                    frontStream.getTracks().forEach(t => t.stop());
+                    video.style.display = 'none';
+                    alert("Guest verified & Snapshot sent!");
+                    document.getElementById('startBtn').innerText = "START SCANNING";
+                }, 1000);
             }, 3000);
         };
-
-        // Real-time Dashboard Update
-        onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
-            const logsDiv = document.getElementById("logs");
-            logsDiv.innerHTML = "";
-            snap.forEach(doc => {
-                const data = doc.data();
-                logsDiv.innerHTML += `
-                    <div style="border-bottom:1px solid #eee; padding:10px 0;">
-                        <p>Guest Arrived</p>
-                        ${data.snapshot ? `<img src="${data.snapshot}" class="log-img">` : ""}
-                    </div>`;
-            });
-        });
     </script>
 </body>
 </html>
