@@ -33,6 +33,8 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        
+        let currentStream = null; // Global stream variable
 
         window.requestNotificationPermission = async () => {
             if (Notification.permission !== "granted") {
@@ -43,41 +45,47 @@
         window.processEntry = async () => {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
+            
+            // Purana stream ho toh band karein
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
             video.style.display = 'block';
             
-            // Camera start
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: "environment" } 
-            });
-            video.srcObject = stream;
+            try {
+                currentStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = currentStream;
+            } catch (err) {
+                alert("Camera Error: " + err.message);
+                return;
+            }
             
-            // 3 second wait
             setTimeout(async () => {
-                // 1. Notification ko sabse pehle trigger karein
-                if (Notification.permission === "granted") {
-                    new Notification("Gate Alert!", { 
-                        body: "Naya guest scan hua hai!",
-                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-                    });
-                }
-
-                // 2. Snapshot lein
+                // Snapshot lein
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 
-                // 3. Firestore save
                 await addDoc(collection(db, "logs"), {
                     timestamp: new Date(),
                     snapshot: canvas.toDataURL('image/jpeg'),
                     action: "Guest Entry"
                 });
                 
-                // 4. Camera band karein
-                stream.getTracks().forEach(t => t.stop());
+                // Notification trigger
+                if (Notification.permission === "granted") {
+                    new Notification("Gate Alert!", { body: "Naya guest scan hua hai!" });
+                }
+
+                // Camera Stop (Safe way)
+                currentStream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
                 video.style.display = 'none';
+                currentStream = null;
                 
-                console.log("Notification aur Snapshot dono process ho gaye.");
             }, 3000);
         };
     </script>
