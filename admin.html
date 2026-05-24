@@ -1,70 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GatePass | Admin Dashboard</title>
-    <style>
-        :root { --bg: #0b0e14; --surface: #151921; --accent: #00f2fe; --text: #e2e8f0; --border: #1e293b; }
-        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: auto; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-        input, select { width: 100%; padding: 0.75rem; background: var(--bg); border: 1px solid var(--border); color: white; border-radius: 6px; margin: 10px 0; }
-        button { width: 100%; padding: 0.75rem; background: var(--accent); border: none; border-radius: 6px; font-weight: 700; cursor: pointer; color: var(--bg); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; border: 1px solid var(--border); text-align: left; font-size: 0.9rem; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Admin Dashboard - Aaryan House</title>
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#0B1220;
+  color:white;
+}
+
+.header{
+  padding:16px;
+  background:#111A2E;
+  text-align:center;
+  font-weight:700;
+  font-size:18px;
+}
+
+.sub{
+  text-align:center;
+  font-size:12px;
+  color:#94A3B8;
+  margin-top:-8px;
+  margin-bottom:10px;
+}
+
+.container{
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.card{
+  background:#111A2E;
+  border-radius:14px;
+  padding:12px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+img{
+  width:70px;
+  height:70px;
+  border-radius:10px;
+  object-fit:cover;
+  background:#000;
+}
+
+.badge{
+  display:inline-block;
+  background:#3B82F6;
+  padding:3px 10px;
+  border-radius:20px;
+  font-size:12px;
+  margin-top:4px;
+}
+
+.time{
+  font-size:12px;
+  color:#94A3B8;
+}
+
+.empty{
+  text-align:center;
+  margin-top:50px;
+  color:#94A3B8;
+}
+</style>
 </head>
+
 <body>
-    <div class="container">
-        <h1>Admin Dashboard</h1>
-        <div class="card">
-            <h3>Register Building</h3>
-            <input type="text" id="bName" placeholder="Building Name">
-            <input type="text" id="bCity" placeholder="City">
-            <button onclick="registerBuilding()">Register Building</button>
-        </div>
-        <div class="card">
-            <h3>Provision Gate</h3>
-            <select id="bSelect"><option value="">Select Building</option></select>
-            <input type="text" id="gName" placeholder="Gate Name">
-            <button onclick="createGate()">Generate Gate Node</button>
-        </div>
-        <div class="card">
-            <h3>Active Gates</h3>
-            <table><thead><tr><th>Building</th><th>Gate</th><th>Link</th></tr></thead><tbody id="gTableBody"></tbody></table>
-        </div>
-    </div>
 
-    <script type="module">
-        import { db } from './firebase-config.js';
-        import { collection, addDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<div class="header">🏠 Aaryan's House</div>
+<div class="sub">Live Security Control Panel</div>
 
-        onSnapshot(query(collection(db, "users"), orderBy("timestamp", "desc")), (snap) => {
-            const select = document.getElementById("bSelect");
-            select.innerHTML = '<option value="">Select Building</option>';
-            snap.forEach(doc => { select.innerHTML += `<option value="${doc.id}">${doc.data().buildingName}</option>`; });
-        });
+<div class="container" id="list">
+  <div class="empty">Waiting for guest activity...</div>
+</div>
 
-        onSnapshot(query(collection(db, "gates"), orderBy("timestamp", "desc")), (snap) => {
-            const tbody = document.getElementById("gTableBody");
-            tbody.innerHTML = "";
-            snap.forEach(doc => {
-                const data = doc.data();
-                const gateUrl = `${window.location.origin}/index.html?id=${data.accountId}&gate=${encodeURIComponent(data.gateName)}`;
-                tbody.innerHTML += `<tr><td>${data.accountId}</td><td>${data.gateName}</td><td><a href="${gateUrl}" target="_blank">Open</a></td></tr>`;
-            });
-        });
+<script type="module">
 
-        window.registerBuilding = async () => {
-            await addDoc(collection(db, "users"), { buildingName: document.getElementById("bName").value, city: document.getElementById("bCity").value, timestamp: new Date().toISOString() });
-            alert("Building Registered");
-        };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, query, orderBy } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        window.createGate = async () => {
-            await addDoc(collection(db, "gates"), { accountId: document.getElementById("bSelect").value, gateName: document.getElementById("gName").value, timestamp: new Date().toISOString() });
-            alert("Gate Provisioned");
-        };
-    </script>
+/* ================= FIREBASE ================= */
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFvW1OlCywfyDX6ix0",
+  authDomain: "gatepass-saas.firebaseapp.com",
+  projectId: "gatepass-saas",
+  storageBucket: "gatepass-saas.appspot.com",
+  messagingSenderId: "788886920648",
+  appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const list = document.getElementById("list");
+
+/* ================= SAFE TIME ================= */
+
+function formatTime(t){
+  try{
+    if(!t) return "Unknown time";
+    return new Date(t).toLocaleString();
+  }catch(e){
+    return "Invalid time";
+  }
+}
+
+/* ================= LIVE ALERTS ================= */
+
+const q = query(collection(db,"alerts"));
+
+onSnapshot(q, (snapshot) => {
+
+  list.innerHTML = "";
+
+  if(snapshot.empty){
+    list.innerHTML = `<div class="empty">No guest entries yet</div>`;
+    return;
+  }
+
+  snapshot.forEach(doc => {
+    const d = doc.data();
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <img src="${d.frontSnapshot || ''}" />
+      <div>
+        <div><b>Guest Entry</b></div>
+        <div class="badge">${d.gateId || "Unknown Gate"}</div>
+        <div class="time">${formatTime(d.timestamp)}</div>
+      </div>
+    `;
+
+    list.appendChild(card);
+  });
+
+});
+
+</script>
+
 </body>
 </html>
