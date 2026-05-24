@@ -6,7 +6,6 @@
     <title>Aaryan's Security</title>
     <style>
         body { font-family: sans-serif; background: #f4f4f9; padding: 20px; text-align: center; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer; }
         #video { width: 100%; border-radius: 15px; display: none; margin-top: 10px; }
     </style>
@@ -15,7 +14,7 @@
 
     <div class="card">
         <h1>Aaryan's House</h1>
-        <button class="btn" id="startBtn" onclick="processEntry()">START SCANNING</button>
+        <button class="btn" onclick="processEntry()">START SCANNING</button>
         <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
@@ -35,52 +34,39 @@
         const db = getFirestore(app);
 
         window.requestNotificationPermission = async () => {
-            if (Notification.permission !== "granted") {
-                await Notification.requestPermission();
-            }
+            if (Notification.permission !== "granted") await Notification.requestPermission();
         };
 
         window.processEntry = async () => {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             video.style.display = 'block';
-            
-            try {
-                // Rear camera access
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: { exact: "environment" } } 
-                });
-                video.srcObject = stream;
-            } catch (e) {
-                // Fallback to any camera if 'exact' environment fails
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-            }
-            
+
+            // 1. Rear Camera se Scan
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            video.srcObject = stream;
+
             setTimeout(async () => {
+                // 2. Snapshot lein (Canvas par)
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
-                
+
+                // 3. Firestore mein Save
                 await addDoc(collection(db, "logs"), {
                     timestamp: new Date(),
                     snapshot: canvas.toDataURL('image/jpeg'),
                     action: "Guest Entry"
                 });
-                
-                // Aggressive Stream Cleanup
-                const tracks = video.srcObject.getTracks();
-                tracks.forEach(track => {
-                    track.stop();
-                    track.enabled = false;
-                });
-                video.srcObject = null;
+
+                // 4. Camera Stop & Notification
+                stream.getTracks().forEach(t => t.stop());
                 video.style.display = 'none';
-                
-                // Final Notification Trigger
+
+                // Notification Force Trigger
                 if (Notification.permission === "granted") {
-                    new Notification("Gate Alert!", { 
-                        body: "Naya guest scan hua hai!",
+                    new Notification("Gate Alert!", {
+                        body: "Guest scan ho gaya hai!",
                         icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
                     });
                 }
