@@ -2,21 +2,20 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Aaryan's Security - Integrated</title>
+    <title>Gate Security App</title>
     <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; text-align: center; }
-        .card { background: #2d2d2d; padding: 20px; border-radius: 20px; }
-        .btn { padding: 15px 30px; margin: 10px; border-radius: 10px; border: none; cursor: pointer; background: #4f46e5; color: white; font-weight: bold; }
-        #video { width: 100%; border-radius: 10px; display: none; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
+        .btn { padding: 15px; margin: 10px; width: 80%; border-radius: 10px; border: none; background: #4f46e5; color: white; font-weight: bold; }
+        #video { width: 100%; border-radius: 10px; display: none; margin-top: 10px; }
     </style>
 </head>
 <body>
 
     <div class="card">
         <h1>Gate Security</h1>
-        <button class="btn" onclick="initializeSystem()">1. SETUP PERMISSIONS</button>
-        <button class="btn" onclick="startFullScan()">2. START SCANNING</button>
-        <video id="video" autoplay playsinline></video>
+        <button class="btn" onclick="setupSystem()">1. SETUP PERMISSIONS</button>
+        <button class="btn" onclick="runCompleteScan()">2. START SCANNING</button>
+        <video id="video" autoplay playsinline muted></video>
     </div>
 
     <script type="module">
@@ -30,43 +29,48 @@
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         }));
 
-        // 1. SETUP: Permissons ek saath handle karein
-        window.initializeSystem = async () => {
+        // Permissions Setup
+        window.setupSystem = async () => {
             await Notification.requestPermission();
-            await navigator.mediaDevices.getUserMedia({ video: true });
-            alert("System Ready!");
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            stream.getTracks().forEach(t => t.stop());
+            alert("Permissions Configured!");
         };
 
-        // 2. SCAN: Ye pura flow control karta hai
-        window.startFullScan = async () => {
+        // Complete Scan Logic
+        window.runCompleteScan = async () => {
             const video = document.getElementById('video');
             const canvas = document.createElement('canvas');
             
-            // Camera start
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            video.srcObject = stream;
+            // 1. Camera Start
             video.style.display = 'block';
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: { ideal: "environment" } } 
+            });
+            video.srcObject = stream;
 
-            // Snap delay
+            // 2. Snapshot Logic
             setTimeout(async () => {
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
 
-                // Upload
+                // 3. Upload
                 await addDoc(collection(db, "logs"), {
                     timestamp: new Date(),
                     snapshot: canvas.toDataURL('image/jpeg')
                 });
 
-                // Cleanup
+                // 4. Cleanup (Camera off)
                 stream.getTracks().forEach(t => t.stop());
                 video.style.display = 'none';
 
-                // Notification: Logic yahan alag rakhi hai taaki stream se clash na ho
+                // 5. Notification (Stream band hone ke baad)
                 setTimeout(() => {
-                    new Notification("Guest Alert", { body: "New entry captured!" });
-                }, 500);
+                    if(Notification.permission === "granted") {
+                        new Notification("Gate Alert", { body: "Guest Entry Captured!" });
+                    }
+                }, 100);
             }, 2000);
         };
     </script>
