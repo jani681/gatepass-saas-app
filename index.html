@@ -43,24 +43,21 @@
         const db = getFirestore(app);
         const messaging = getMessaging(app);
 
-        // Service Worker Register
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('firebase-messaging-sw.js')
-            .then(() => console.log('SW Registered'));
-        }
-
+        // 1. Notification Permission
         window.setupNotifications = async () => {
-            try {
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    const token = await getToken(messaging, { 
-                        vapidKey: 'BEyvGk90sVmva7tLKquggOUwjuyXjoc131QMiagDeGHa2ZV-OFUPqX-Sf8YzktpGyMGL2SmXKKXD2HaG7yvcJJE' 
-                    });
-                    console.log("Token:", token);
-                    alert("Notifications enabled!");
-                }
-            } catch (err) {
-                alert("Error: " + err.message);
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                alert("Notifications enabled!");
+            }
+        };
+
+        // 2. Local Trigger Function
+        const showLocalNotification = () => {
+            if (Notification.permission === 'granted') {
+                new Notification("Gate Alert!", {
+                    body: "Naya guest enter hua hai, check your dashboard.",
+                    icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+                });
             }
         };
 
@@ -78,13 +75,18 @@
                 setTimeout(async () => {
                     const canvas = document.getElementById('canvas');
                     canvas.getContext('2d').drawImage(video, 0, 0);
+                    
                     await addDoc(collection(db, "logs"), {
                         timestamp: new Date(),
                         snapshot: canvas.toDataURL('image/jpeg'),
                         action: "Guest Entry"
                     });
+                    
                     frontStream.getTracks().forEach(t => t.stop());
                     video.style.display = 'none';
+                    
+                    // Notification Trigger
+                    showLocalNotification();
                     alert("Snapshot saved!");
                 }, 1000);
             }, 3000);
