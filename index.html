@@ -50,6 +50,8 @@ video{
   border-radius:14px;
   background:black;
   margin-top:10px;
+  aspect-ratio: 3/4;
+  object-fit:cover;
 }
 
 button{
@@ -132,14 +134,15 @@ from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore,
   collection,
-  addDoc
+  addDoc,
+  serverTimestamp
 }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 /* ================= CONFIG ================= */
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFvW1OlCywfyDX6ix0",
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
   projectId: "gatepass-saas",
   storageBucket: "gatepass-saas.appspot.com",
@@ -199,6 +202,8 @@ async function stopCam(){
 
   video.pause();
   video.srcObject = null;
+
+  await wait(300);
 }
 
 async function startCam(mode){
@@ -209,7 +214,9 @@ async function startCam(mode){
     video:{
       facingMode:{
         ideal: mode
-      }
+      },
+      width:{ ideal: 480 },
+      height:{ ideal: 640 }
     },
     audio:false
   });
@@ -218,29 +225,28 @@ async function startCam(mode){
 
   await video.play();
 
-  await wait(250);
+  await wait(300);
 }
 
-/* ================= FIXED COMPRESSED CAPTURE ================= */
+/* ================= ULTRA SAFE IMAGE CAPTURE ================= */
 
 function capture(){
 
   const ctx = canvas.getContext("2d");
 
-  /* Firebase-safe resolution */
-  const width = 480;
-  const height = 360;
+  const width = 240;
+  const height = 320;
 
   canvas.width = width;
   canvas.height = height;
 
   ctx.drawImage(video, 0, 0, width, height);
 
-  /* Strong compression */
-  return canvas.toDataURL("image/jpeg", 0.45);
+  /* SUPER compressed for Firestore safety */
+  return canvas.toDataURL("image/jpeg", 0.25);
 }
 
-/* ================= MAIN SCAN ENGINE ================= */
+/* ================= MAIN ENGINE ================= */
 
 async function scan(){
 
@@ -251,7 +257,7 @@ async function scan(){
 
   try{
 
-    /* ================= REAR CAMERA ================= */
+    /* ===== REAR CAMERA ===== */
 
     setStatus("Opening rear camera...");
 
@@ -265,7 +271,7 @@ async function scan(){
 
     await wait(500);
 
-    /* ================= FRONT CAMERA ================= */
+    /* ===== FRONT CAMERA ===== */
 
     setStatus("Capturing guest face...");
 
@@ -277,28 +283,35 @@ async function scan(){
 
     await stopCam();
 
-    /* ================= DATA ================= */
+    /* ===== SAFE PAYLOAD ===== */
 
     const data = {
 
-      timestamp: new Date().toISOString(),
+      timestamp: serverTimestamp(),
 
       gateId: CURRENT_GATE,
 
-      rearSnapshot,
-      frontSnapshot,
+      rearSnapshot: rearSnapshot.substring(0, 150000),
+
+      frontSnapshot: frontSnapshot.substring(0, 150000),
 
       action: "Guest Entry",
 
-      /* STEP 6 SMART LAYER */
       visitorType: "unknown",
+
       confidence: 0,
+
       status: "new",
+
       device: "gate-device"
 
     };
 
-    /* ================= FIREBASE WRITE ================= */
+    console.log("Payload Size:",
+      JSON.stringify(data).length
+    );
+
+    /* ===== DATABASE ===== */
 
     setStatus("Uploading to database...");
 
@@ -306,19 +319,19 @@ async function scan(){
 
     await addDoc(collection(db, "alerts"), data);
 
-    /* ================= SUCCESS ================= */
+    /* ===== SUCCESS ===== */
 
     setStatus("Entry Recorded ✔");
-
-    console.log("✅ Uploaded:", data);
 
     alert("Guest captured successfully");
 
   }catch(err){
 
-    console.error("SCAN ERROR:", err);
+    console.error("FULL ERROR:", err);
 
     setStatus("Error uploading data ❌");
+
+    alert("Upload failed: " + err.message);
 
     await stopCam();
   }
