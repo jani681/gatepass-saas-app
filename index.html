@@ -7,11 +7,11 @@
     <style>
         body { font-family: sans-serif; background: #f4f4f9; padding: 20px; text-align: center; }
         .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
-        #video { width: 100%; border-radius: 15px; display: none; }
+        .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer; }
+        #video { width: 100%; border-radius: 15px; display: none; margin-top: 10px; }
     </style>
 </head>
-<body onload="checkAutoPermission()">
+<body onload="requestNotificationPermission()">
 
     <div class="card">
         <h1>Aaryan's House</h1>
@@ -34,23 +34,29 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Auto Permission Check
-        window.checkAutoPermission = async () => {
+        // 1. Permission Auto-Request
+        window.requestNotificationPermission = async () => {
             if (Notification.permission !== "granted") {
                 await Notification.requestPermission();
             }
         };
 
+        // 2. Main Scanner Logic
         window.processEntry = async () => {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             video.style.display = 'block';
             
-            // Rear Camera (environment) enable kiya
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: { exact: "environment" } } 
-            });
-            video.srcObject = stream;
+            // Rear camera without 'exact' to ensure compatibility
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Camera access error: " + err.message);
+                return;
+            }
             
             setTimeout(async () => {
                 canvas.width = video.videoWidth;
@@ -63,13 +69,21 @@
                     action: "Guest Entry"
                 });
                 
-                stream.getTracks().forEach(t => t.stop());
+                // Stream stop
+                video.srcObject.getTracks().forEach(t => t.stop());
                 video.style.display = 'none';
                 
-                // Notification Auto-Trigger
-                if (Notification.permission === "granted") {
-                    new Notification("Gate Alert!", { body: "Naya guest scan hua hai!" });
-                }
+                // Notification (Delay ke saath taaki browser focus mil jaye)
+                setTimeout(() => {
+                    if (Notification.permission === "granted") {
+                        new Notification("Gate Alert!", { 
+                            body: "Naya guest scan hua hai!",
+                            icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+                        });
+                    }
+                }, 500);
+                
+                alert("Snapshot saved!");
             }, 3000);
         };
     </script>
