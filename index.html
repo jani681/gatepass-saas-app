@@ -1,294 +1,508 @@
-// =====================================================
-// DOM REFERENCES
-// =====================================================
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+  />
 
-const scanBtn = document.getElementById("scanBtn");
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const statusText = document.getElementById("status");
+  <title>Aaryan's House - Gate Security</title>
 
-let activeStream = null;
-let isProcessing = false;
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
 
-// =====================================================
-// HELPERS
-// =====================================================
+    body {
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
 
-function setStatus(message, type = "") {
-  statusText.textContent = message;
-  statusText.className = `status ${type}`;
-}
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
 
-function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
 
-// =====================================================
-// CAMERA START
-// =====================================================
+    p {
+      color: #cbd5e1;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
 
-async function startCamera(mode = "environment") {
+    #video {
+      width: 100%;
+      border-radius: 14px;
+      background: black;
+      display: none;
+      margin-bottom: 15px;
+      object-fit: cover;
+    }
 
-  try {
+    .status {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #93c5fd;
+      min-height: 20px;
+    }
 
-    // Extra cleanup before switching cameras
-    await stopCamera();
+    button {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
 
-    const constraints = {
-      audio: false,
-      video: {
-        facingMode: {
-          ideal: mode
-        },
-        width: {
-          ideal: 1280
-        },
-        height: {
-          ideal: 720
-        }
-      }
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .success {
+      color: #4ade80;
+    }
+
+    .error {
+      color: #f87171;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+
+    <h1>Gate Security System</h1>
+
+    <p>Aaryan's House</p>
+
+    <video
+      id="video"
+      autoplay
+      playsinline
+      muted
+    ></video>
+
+    <canvas
+      id="canvas"
+      style="display: none;"
+    ></canvas>
+
+    <div
+      id="status"
+      class="status"
+    >
+      Ready to scan guest.
+    </div>
+
+    <button id="scanBtn">
+      Scan Guest
+    </button>
+
+  </div>
+
+  <script type="module">
+
+    // =====================================================
+    // FIREBASE IMPORTS
+    // =====================================================
+
+    import { initializeApp }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+
+    import {
+      getFirestore,
+      collection,
+      addDoc
+    }
+    from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // =====================================================
+    // FIREBASE CONFIG
+    // =====================================================
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+      authDomain: "gatepass-saas.firebaseapp.com",
+      projectId: "gatepass-saas",
+      storageBucket: "gatepass-saas.appspot.com",
+      messagingSenderId: "788886920648",
+      appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
     };
 
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    // =====================================================
+    // FIREBASE INIT
+    // =====================================================
 
-    activeStream = stream;
+    const app = initializeApp(firebaseConfig);
 
-    video.srcObject = stream;
+    const db = getFirestore(app);
 
-    video.style.display = "block";
+    // =====================================================
+    // DOM ELEMENTS
+    // =====================================================
 
-    await video.play();
+    const scanBtn = document.getElementById("scanBtn");
 
-    // Mobile hardware stabilization
-    await wait(600);
+    const video = document.getElementById("video");
 
-    return stream;
+    const canvas = document.getElementById("canvas");
 
-  } catch (error) {
+    const statusText = document.getElementById("status");
 
-    console.error("Camera start error:", error);
-    throw error;
-  }
-}
+    // =====================================================
+    // GLOBAL VARIABLES
+    // =====================================================
 
-// =====================================================
-// CAPTURE FRAME
-// =====================================================
+    let activeStream = null;
 
-function captureFrame() {
+    let isProcessing = false;
 
-  const ctx = canvas.getContext("2d");
+    // =====================================================
+    // HELPER
+    // =====================================================
 
-  canvas.width = video.videoWidth || 1280;
-  canvas.height = video.videoHeight || 720;
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    function setStatus(message, type = "") {
 
-  return canvas.toDataURL("image/jpeg", 0.82);
-}
+      statusText.textContent = message;
 
-// =====================================================
-// AGGRESSIVE CAMERA CLEANUP
-// =====================================================
+      statusText.className = `status ${type}`;
+    }
 
-async function stopCamera() {
+    // =====================================================
+    // START CAMERA
+    // =====================================================
 
-  try {
+    async function startCamera(mode = "environment") {
 
-    if (activeStream) {
+      try {
 
-      activeStream.getTracks().forEach(track => {
+        // Extra cleanup before switching
+        await stopCamera();
 
-        try {
-          track.stop();
-        } catch (e) {
-          console.warn(e);
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: {
+              ideal: mode
+            },
+            width: {
+              ideal: 1280
+            },
+            height: {
+              ideal: 720
+            }
+          }
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(
+          constraints
+        );
+
+        activeStream = stream;
+
+        video.srcObject = stream;
+
+        video.style.display = "block";
+
+        await video.play();
+
+        // Stabilization delay
+        await wait(500);
+
+        return stream;
+
+      } catch (error) {
+
+        console.error("Camera start failed:", error);
+
+        throw error;
+      }
+    }
+
+    // =====================================================
+    // CAPTURE FRAME
+    // =====================================================
+
+    function captureFrame() {
+
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth || 1280;
+
+      canvas.height = video.videoHeight || 720;
+
+      ctx.drawImage(
+        video,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
+      return canvas.toDataURL(
+        "image/jpeg",
+        0.82
+      );
+    }
+
+    // =====================================================
+    // STOP CAMERA COMPLETELY
+    // =====================================================
+
+    async function stopCamera() {
+
+      try {
+
+        if (activeStream) {
+
+          activeStream.getTracks().forEach(track => {
+
+            try {
+              track.stop();
+            } catch (err) {
+              console.warn(err);
+            }
+
+          });
+
         }
 
-      });
+        video.pause();
 
+        video.srcObject = null;
+
+        video.removeAttribute("src");
+
+        video.load();
+
+        video.style.display = "none";
+
+        activeStream = null;
+
+        // Hardware release delay
+        await wait(700);
+
+      } catch (error) {
+
+        console.error("Camera cleanup error:", error);
+      }
     }
 
-    video.pause();
+    // =====================================================
+    // DATABASE SAVE
+    // =====================================================
 
-    video.srcObject = null;
+    async function saveGuestLog(
+      rearSnapshotDataURL,
+      frontSnapshotDataURL
+    ) {
 
-    video.removeAttribute("src");
-
-    video.load();
-
-    activeStream = null;
-
-    // Give browser time to release hardware
-    await wait(700);
-
-  } catch (error) {
-
-    console.error("Camera cleanup error:", error);
-  }
-}
-
-// =====================================================
-// DATABASE SAVE
-// =====================================================
-
-async function saveToFirestore(rearSnapshot, frontSnapshot) {
-
-  try {
-
-    await addDoc(collection(db, "logs"), {
-      timestamp: serverTimestamp(),
-      rearSnapshot,
-      frontSnapshot,
-      action: "Guest Entry"
-    });
-
-  } catch (error) {
-
-    console.error("Firestore Error:", error);
-
-    throw error;
-  }
-}
-
-// =====================================================
-// SAFE NOTIFICATION
-// =====================================================
-
-function triggerNotification() {
-
-  // FULLY DECOUPLED FROM FIREBASE + CAMERA THREAD
-
-  setTimeout(async () => {
-
-    try {
-
-      if (!("Notification" in window)) return;
-
-      if (Notification.permission === "default") {
-        await Notification.requestPermission();
-      }
-
-      if (Notification.permission === "granted") {
-
-        new Notification("Gate Alert!", {
-          body: "Guest captured successfully.",
-          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-          silent: false
-        });
-
-      }
-
-    } catch (error) {
-
-      console.error("Notification Error:", error);
+      await addDoc(
+        collection(db, "logs"),
+        {
+          timestamp: new Date(),
+          rearSnapshot: rearSnapshotDataURL,
+          frontSnapshot: frontSnapshotDataURL,
+          action: "Guest Entry"
+        }
+      );
     }
 
-  }, 900);
-}
+    // =====================================================
+    // SAFE NOTIFICATION
+    // =====================================================
 
-// =====================================================
-// MAIN EXECUTION FLOW
-// =====================================================
+    function triggerNotification() {
 
-async function handleGuestScan() {
+      // Completely decoupled from upload thread
 
-  if (isProcessing) return;
+      setTimeout(async () => {
 
-  isProcessing = true;
+        try {
 
-  scanBtn.disabled = true;
+          if (!("Notification" in window)) {
+            return;
+          }
 
-  let rearSnapshot = null;
-  let frontSnapshot = null;
+          if (Notification.permission === "default") {
 
-  try {
+            await Notification.requestPermission();
+          }
 
-    // =================================================
-    // STEP 1 -> REAR CAMERA
-    // =================================================
+          if (Notification.permission === "granted") {
 
-    setStatus("Opening rear camera...");
+            new Notification(
+              "Gate Alert!",
+              {
+                body: "Guest entry captured successfully.",
+                icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+                silent: false
+              }
+            );
+          }
 
-    await startCamera("environment");
+        } catch (error) {
 
-    setStatus("Scanning gate / QR...");
+          console.error(
+            "Notification error:",
+            error
+          );
+        }
 
-    await wait(2000);
+      }, 800);
+    }
 
-    rearSnapshot = captureFrame();
+    // =====================================================
+    // MAIN FLOW
+    // =====================================================
 
-    // =================================================
-    // STEP 2 -> STOP REAR CAMERA
-    // =================================================
+    async function handleGuestScan() {
 
-    setStatus("Closing rear camera...");
+      if (isProcessing) return;
 
-    await stopCamera();
+      isProcessing = true;
 
-    // =================================================
-    // STEP 3 -> FRONT CAMERA
-    // =================================================
+      scanBtn.disabled = true;
 
-    setStatus("Opening front camera...");
+      let rearSnapshot = null;
 
-    await startCamera("user");
+      let frontSnapshot = null;
 
-    setStatus("Capturing guest face...");
+      try {
 
-    await wait(1800);
+        // =================================================
+        // STEP 1 - REAR CAMERA
+        // =================================================
 
-    frontSnapshot = captureFrame();
+        setStatus("Opening rear camera...");
 
-    // =================================================
-    // STEP 4 -> STOP FRONT CAMERA
-    // =================================================
+        await startCamera("environment");
 
-    setStatus("Releasing camera hardware...");
+        setStatus("Scanning gate / QR...");
 
-    await stopCamera();
+        await wait(2000);
 
-    // =================================================
-    // STEP 5 -> FIRE NOTIFICATION IMMEDIATELY
-    // =================================================
+        rearSnapshot = captureFrame();
 
-    triggerNotification();
+        // =================================================
+        // STEP 2 - STOP REAR CAMERA
+        // =================================================
 
-    // =================================================
-    // STEP 6 -> DATABASE WRITE
-    // =================================================
+        setStatus("Closing rear camera...");
 
-    setStatus("Uploading to database...");
+        await stopCamera();
 
-    await saveToFirestore(rearSnapshot, frontSnapshot);
+        // =================================================
+        // STEP 3 - FRONT CAMERA
+        // =================================================
 
-    // =================================================
-    // COMPLETE
-    // =================================================
+        setStatus("Opening front camera...");
 
-    setStatus("Guest entry completed successfully.", "success");
+        await startCamera("user");
 
-  } catch (error) {
+        setStatus("Capturing guest face...");
 
-    console.error(error);
+        await wait(1800);
 
-    await stopCamera();
+        frontSnapshot = captureFrame();
 
-    setStatus(
-      "Error: " + (error.message || "Execution failed."),
-      "error"
+        // =================================================
+        // STEP 4 - STOP FRONT CAMERA
+        // =================================================
+
+        setStatus("Releasing camera hardware...");
+
+        await stopCamera();
+
+        // =================================================
+        // STEP 5 - NOTIFICATION
+        // =================================================
+
+        triggerNotification();
+
+        // =================================================
+        // STEP 6 - DATABASE UPLOAD
+        // =================================================
+
+        setStatus("Uploading to database...");
+
+        await saveGuestLog(
+          rearSnapshot,
+          frontSnapshot
+        );
+
+        // =================================================
+        // COMPLETE
+        // =================================================
+
+        setStatus(
+          "Guest entry completed successfully.",
+          "success"
+        );
+
+      } catch (error) {
+
+        console.error(error);
+
+        await stopCamera();
+
+        setStatus(
+          "Error: " +
+          (error.message || "Execution failed."),
+          "error"
+        );
+
+      } finally {
+
+        isProcessing = false;
+
+        scanBtn.disabled = false;
+      }
+    }
+
+    // =====================================================
+    // BUTTON EVENT
+    // =====================================================
+
+    scanBtn.addEventListener(
+      "click",
+      handleGuestScan
     );
 
-  } finally {
+  </script>
 
-    isProcessing = false;
-
-    scanBtn.disabled = false;
-  }
-}
-
-// =====================================================
-// BUTTON EVENT
-// =====================================================
-
-scanBtn.addEventListener("click", handleGuestScan);
+</body>
+</html>
