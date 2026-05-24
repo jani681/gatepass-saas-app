@@ -3,59 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aaryan's GatePass</title>
+    <title>Aaryan's House</title>
     <style>
         :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
-        body { font-family: sans-serif; background: var(--bg); margin: 0; padding: 20px; text-align: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; text-align: center; }
         .container { max-width: 400px; margin: auto; }
-        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; margin-top: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .btn { width: 100%; padding: 25px; border-radius: 20px; border: none; background: var(--primary); color: white; font-size: 1.5rem; font-weight: bold; cursor: pointer; }
+        .card { background: white; padding: 20px; border-radius: 20px; margin-top: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .log-item { padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>Aaryan's House</h1>
-        
-        <div id="terminal">
-            <button class="btn" onclick="ringBell()">🔔 RING BELL</button>
-            <p id="status">Ready</p>
-        </div>
+        <button class="btn" onclick="ringBell()">🔔 RING BELL</button>
+        <p id="status" style="margin-top:10px;">Ready</p>
 
         <div class="card">
             <h3>Recent Visitors</h3>
-            <div id="logs">Loading logs...</div>
+            <div id="logs">Loading...</div>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             projectId: "gatepass-saas",
-            // ... baaki config wahi hai
+            authDomain: "gatepass-saas.firebaseapp.com",
+            storageBucket: "gatepass-saas.appspot.com",
+            messagingSenderId: "788886920648",
+            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
         };
         const db = getFirestore(initializeApp(firebaseConfig));
 
-        // Ring Bell Function
         window.ringBell = async () => {
             document.getElementById('status').innerText = "Ringing...";
-            await addDoc(collection(db, "logs"), { 
-                timestamp: new Date().toISOString(),
-                action: "Visitor Ring" 
-            });
-            document.getElementById('status').innerText = "Sent!";
-            setTimeout(() => document.getElementById('status').innerText = "Ready", 2000);
+            try {
+                await addDoc(collection(db, "logs"), { 
+                    timestamp: serverTimestamp(),
+                    action: "Visitor Ring" 
+                });
+                document.getElementById('status').innerText = "Sent!";
+                setTimeout(() => document.getElementById('status').innerText = "Ready", 2000);
+            } catch (e) {
+                document.getElementById('status').innerText = "Error!";
+            }
         };
 
-        // Live Logs (Dashboard)
         onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
             const logsDiv = document.getElementById("logs");
             logsDiv.innerHTML = "";
             snap.forEach(doc => {
-                logsDiv.innerHTML += `<p>${new Date(doc.data().timestamp).toLocaleTimeString()}: Visitor Arrived</p>`;
+                const data = doc.data();
+                // Date check: agar timestamp valid hai toh show karo
+                const date = data.timestamp ? data.timestamp.toDate().toLocaleTimeString() : "Just now";
+                logsDiv.innerHTML += `<div class="log-item">${date} - Visitor Arrived</div>`;
             });
         });
     </script>
