@@ -34,56 +34,50 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 1. Permission Auto-Request
         window.requestNotificationPermission = async () => {
             if (Notification.permission !== "granted") {
                 await Notification.requestPermission();
             }
         };
 
-        // 2. Main Scanner Logic
         window.processEntry = async () => {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
             video.style.display = 'block';
             
-            // Rear camera without 'exact' to ensure compatibility
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                alert("Camera access error: " + err.message);
-                return;
-            }
+            // Camera start
+            const stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { facingMode: "environment" } 
+            });
+            video.srcObject = stream;
             
+            // 3 second wait
             setTimeout(async () => {
+                // 1. Notification ko sabse pehle trigger karein
+                if (Notification.permission === "granted") {
+                    new Notification("Gate Alert!", { 
+                        body: "Naya guest scan hua hai!",
+                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+                    });
+                }
+
+                // 2. Snapshot lein
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 
+                // 3. Firestore save
                 await addDoc(collection(db, "logs"), {
                     timestamp: new Date(),
                     snapshot: canvas.toDataURL('image/jpeg'),
                     action: "Guest Entry"
                 });
                 
-                // Stream stop
-                video.srcObject.getTracks().forEach(t => t.stop());
+                // 4. Camera band karein
+                stream.getTracks().forEach(t => t.stop());
                 video.style.display = 'none';
                 
-                // Notification (Delay ke saath taaki browser focus mil jaye)
-                setTimeout(() => {
-                    if (Notification.permission === "granted") {
-                        new Notification("Gate Alert!", { 
-                            body: "Naya guest scan hua hai!",
-                            icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-                        });
-                    }
-                }, 500);
-                
-                alert("Snapshot saved!");
+                console.log("Notification aur Snapshot dono process ho gaye.");
             }, 3000);
         };
     </script>
