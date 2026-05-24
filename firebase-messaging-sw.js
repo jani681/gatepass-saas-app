@@ -1,5 +1,3 @@
-// firebase-messaging-sw.js
-
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
@@ -14,9 +12,11 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+/* Background notification handler */
 messaging.onBackgroundMessage((payload) => {
   self.registration.showNotification("Gate Alert!", {
-    body: payload?.notification?.body || "New guest entry captured",
-    icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
+    body: payload.data?.body || "New guest detected",
+    icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+    vibrate: [200,100,200]
   });
 });
