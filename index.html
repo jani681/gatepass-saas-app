@@ -105,7 +105,7 @@ import { getFirestore, collection, addDoc } from "https://www.gstatic.com/fireba
 import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFVw1OlCywfyDX6ix0",
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFw1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
   projectId: "gatepass-saas",
   storageBucket: "gatepass-saas.appspot.com",
@@ -113,7 +113,8 @@ const firebaseConfig = {
   appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
 };
 
-const VAPID_PUBLIC_KEY = "BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
+const VAPID_PUBLIC_KEY =
+  "BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
@@ -127,6 +128,8 @@ const btn = document.getElementById("scanBtn");
 let stream = null;
 let running = false;
 
+/* ================= STATUS ================= */
+
 function setStatus(t) {
   status.textContent = t;
 }
@@ -135,9 +138,7 @@ function wait(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-/* =========================
-   SERVICE WORKER (CRITICAL FOR PUSH)
-========================= */
+/* ================= SW REGISTRATION ================= */
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/firebase-messaging-sw.js")
@@ -145,9 +146,7 @@ if ("serviceWorker" in navigator) {
     .catch(err => console.error("SW failed", err));
 }
 
-/* =========================
-   NOTIFICATION SYSTEM (FCM + VAPID FIX)
-========================= */
+/* ================= NOTIFICATION INIT ================= */
 
 async function initNotificationSystem() {
   try {
@@ -163,9 +162,7 @@ async function initNotificationSystem() {
       serviceWorkerRegistration: reg
     });
 
-    if (token) {
-      console.log("FCM TOKEN:", token);
-    }
+    if (token) console.log("FCM TOKEN:", token);
 
   } catch (err) {
     console.error("Notification init failed:", err);
@@ -175,9 +172,7 @@ async function initNotificationSystem() {
 window.addEventListener("click", initNotificationSystem, { once: true });
 window.addEventListener("load", initNotificationSystem);
 
-/* =========================
-   CAMERA ENGINE (UNCHANGED FLOW)
-========================= */
+/* ================= CAMERA CONTROL ================= */
 
 async function stopCamera() {
   if (stream) {
@@ -213,28 +208,45 @@ function capture() {
   return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-/* =========================
-   FINAL NOTIFICATION (SAFE + NON-BLOCKING)
-========================= */
+/* ================= FINAL NOTIFICATION ENGINE (FIXED) ================= */
 
 function triggerNotification() {
-  setTimeout(() => {
-    if (Notification.permission === "granted") {
-      try {
+  const systemNotify = () => {
+    try {
+      if (Notification.permission === "granted") {
         new Notification("Gate Alert!", {
           body: "Naya guest entry captured hua hai!",
           icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
         });
-      } catch (e) {
-        console.error("Notification error", e);
       }
+    } catch (e) {
+      console.error("Notification failed:", e);
     }
-  }, 20);
+  };
+
+  setTimeout(systemNotify, 0);
+
+  setTimeout(() => {
+    const fallback = document.createElement("div");
+    fallback.innerText = "🔔 Guest Entry Captured!";
+    fallback.style.position = "fixed";
+    fallback.style.bottom = "20px";
+    fallback.style.left = "50%";
+    fallback.style.transform = "translateX(-50%)";
+    fallback.style.background = "#2563eb";
+    fallback.style.color = "white";
+    fallback.style.padding = "12px 18px";
+    fallback.style.borderRadius = "10px";
+    fallback.style.zIndex = "9999";
+    fallback.style.fontSize = "14px";
+
+    document.body.appendChild(fallback);
+
+    setTimeout(() => fallback.remove(), 3000);
+  }, 50);
 }
 
-/* =========================
-   MAIN FLOW (UNCHANGED CAMERA ENGINE)
-========================= */
+/* ================= MAIN FLOW ================= */
 
 async function run() {
   if (running) return;
