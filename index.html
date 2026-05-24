@@ -2,75 +2,72 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aaryan's Security</title>
+    <title>Aaryan's Security - Integrated</title>
     <style>
-        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; text-align: center; }
-        .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer; }
-        #video { width: 100%; border-radius: 15px; display: none; margin-top: 10px; }
+        body { font-family: sans-serif; background: #1a1a1a; color: white; padding: 20px; text-align: center; }
+        .card { background: #2d2d2d; padding: 20px; border-radius: 20px; }
+        .btn { padding: 15px 30px; margin: 10px; border-radius: 10px; border: none; cursor: pointer; background: #4f46e5; color: white; font-weight: bold; }
+        #video { width: 100%; border-radius: 10px; display: none; }
     </style>
 </head>
-<body onload="requestNotificationPermission()">
+<body>
 
     <div class="card">
-        <h1>Aaryan's House</h1>
-        <button class="btn" onclick="processEntry()">START SCANNING</button>
-        <video id="video" autoplay playsinline muted></video>
-        <canvas id="canvas" style="display:none;"></canvas>
+        <h1>Gate Security</h1>
+        <button class="btn" onclick="initializeSystem()">1. SETUP PERMISSIONS</button>
+        <button class="btn" onclick="startFullScan()">2. START SCANNING</button>
+        <video id="video" autoplay playsinline></video>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
         import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        const firebaseConfig = {
+        const db = getFirestore(initializeApp({
             apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
             projectId: "gatepass-saas",
             messagingSenderId: "788886920648",
             appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+        }));
+
+        // 1. SETUP: Permissons ek saath handle karein
+        window.initializeSystem = async () => {
+            await Notification.requestPermission();
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            alert("System Ready!");
         };
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        window.requestNotificationPermission = async () => {
-            if (Notification.permission !== "granted") await Notification.requestPermission();
-        };
-
-        window.processEntry = async () => {
+        // 2. SCAN: Ye pura flow control karta hai
+        window.startFullScan = async () => {
             const video = document.getElementById('video');
-            const canvas = document.getElementById('canvas');
-            video.style.display = 'block';
-
-            // 1. Rear Camera se Scan
+            const canvas = document.createElement('canvas');
+            
+            // Camera start
             const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
             video.srcObject = stream;
+            video.style.display = 'block';
 
+            // Snap delay
             setTimeout(async () => {
-                // 2. Snapshot lein (Canvas par)
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
 
-                // 3. Firestore mein Save
+                // Upload
                 await addDoc(collection(db, "logs"), {
                     timestamp: new Date(),
-                    snapshot: canvas.toDataURL('image/jpeg'),
-                    action: "Guest Entry"
+                    snapshot: canvas.toDataURL('image/jpeg')
                 });
 
-                // 4. Camera Stop & Notification
+                // Cleanup
                 stream.getTracks().forEach(t => t.stop());
                 video.style.display = 'none';
 
-                // Notification Force Trigger
-                if (Notification.permission === "granted") {
-                    new Notification("Gate Alert!", {
-                        body: "Guest scan ho gaya hai!",
-                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-                    });
-                }
-            }, 3000);
+                // Notification: Logic yahan alag rakhi hai taaki stream se clash na ho
+                setTimeout(() => {
+                    new Notification("Guest Alert", { body: "New entry captured!" });
+                }, 500);
+            }, 2000);
         };
     </script>
 </body>
