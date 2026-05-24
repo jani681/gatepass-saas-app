@@ -14,7 +14,6 @@
   --muted:#94A3B8;
   --blue:#3B82F6;
   --green:#22C55E;
-  --red:#EF4444;
   --radius:18px;
 }
 
@@ -22,13 +21,12 @@
   margin:0;
   padding:0;
   box-sizing:border-box;
-  font-family:system-ui, -apple-system, Segoe UI, Roboto;
+  font-family:system-ui;
 }
 
 body{
   background:var(--bg);
   color:var(--text);
-  min-height:100vh;
   display:flex;
   justify-content:center;
 }
@@ -47,19 +45,11 @@ body{
   margin-top:10px;
 }
 
-.title{
-  font-size:20px;
-  font-weight:700;
-}
-
-.subtitle{
-  font-size:12px;
-  color:var(--muted);
-}
+.title{font-size:20px;font-weight:700;}
+.subtitle{font-size:12px;color:var(--muted);}
 
 .status-dot{
-  width:10px;
-  height:10px;
+  width:10px;height:10px;
   background:var(--green);
   border-radius:50%;
   box-shadow:0 0 10px var(--green);
@@ -74,13 +64,7 @@ body{
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* GATE CARD */
-.gate-info{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
+/* GATE */
 .badge{
   padding:4px 10px;
   border-radius:20px;
@@ -89,7 +73,7 @@ body{
   color:var(--muted);
 }
 
-/* MAIN BUTTON */
+/* BUTTON */
 .button{
   width:100%;
   margin-top:16px;
@@ -101,11 +85,10 @@ body{
   font-size:16px;
   font-weight:600;
   cursor:pointer;
-  transition:0.2s;
 }
 
-.button:active{
-  transform:scale(0.98);
+.button:disabled{
+  opacity:0.6;
 }
 
 /* STATUS */
@@ -116,9 +99,9 @@ body{
   text-align:center;
 }
 
-/* CAMERA BOX (placeholder UI only) */
+/* CAMERA BOX */
 .camera-box{
-  height:200px;
+  height:180px;
   border-radius:16px;
   background:#0A1020;
   margin-top:14px;
@@ -127,35 +110,14 @@ body{
   justify-content:center;
   color:var(--muted);
   border:1px solid rgba(255,255,255,0.05);
+  overflow:hidden;
 }
 
-/* VISITOR CARD */
-.visitor{
-  display:flex;
-  gap:12px;
-  align-items:center;
-}
-
-.thumb{
-  width:55px;
-  height:55px;
-  border-radius:12px;
-  background:#1b2742;
-}
-
-.small{
-  font-size:12px;
-  color:var(--muted);
-}
-
-/* LIST */
-.list-item{
-  display:flex;
-  justify-content:space-between;
-  padding:10px 0;
-  border-bottom:1px solid rgba(255,255,255,0.05);
-  font-size:13px;
-  color:var(--muted);
+video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:16px;
 }
 </style>
 </head>
@@ -173,55 +135,171 @@ body{
     <div class="status-dot"></div>
   </div>
 
-  <!-- GATE CARD -->
+  <!-- GATE INFO -->
   <div class="card">
-    <div class="gate-info">
+    <div style="display:flex;justify-content:space-between;">
       <div>
         <div style="font-weight:600;">Active Gate</div>
-        <div class="small">Auto-detect ready</div>
+        <div style="font-size:12px;color:#94A3B8;">Detected via QR</div>
       </div>
-      <div class="badge">Gate: --</div>
+      <div class="badge" id="gateBadge">Gate: --</div>
     </div>
   </div>
 
-  <!-- MAIN ACTION -->
+  <!-- MAIN CONTROL -->
   <div class="card">
-    <button class="button">SCAN GUEST</button>
-    <div class="status">System ready • waiting for scan</div>
+    <button class="button" id="scanBtn">SCAN GUEST</button>
+    <div class="status" id="status">System ready</div>
 
-    <div class="camera-box">
+    <div class="camera-box" id="cameraBox">
       Camera preview placeholder
     </div>
   </div>
 
-  <!-- LAST VISITOR -->
-  <div class="card">
-    <div style="font-weight:600;margin-bottom:10px;">Last Visitor</div>
-
-    <div class="visitor">
-      <div class="thumb"></div>
-      <div>
-        <div style="font-size:13px;">No data yet</div>
-        <div class="small">Waiting for first scan</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- LOGS -->
-  <div class="card">
-    <div style="font-weight:600;margin-bottom:10px;">Recent Logs</div>
-
-    <div class="list-item">
-      <span>--:--</span>
-      <span>No activity yet</span>
-    </div>
-    <div class="list-item">
-      <span>--:--</span>
-      <span>System initialized</span>
-    </div>
-  </div>
-
 </div>
+
+<script>
+/* ================= CORE STATE ================= */
+
+let stream = null;
+let running = false;
+
+const statusEl = document.getElementById("status");
+const scanBtn = document.getElementById("scanBtn");
+const cameraBox = document.getElementById("cameraBox");
+const gateBadge = document.getElementById("gateBadge");
+
+/* ================= GATE DETECTION ================= */
+
+function getGateId() {
+  const params = new URLSearchParams(window.location.search);
+  const gate = params.get("gate");
+
+  if (gate === "1") return "Gate 1";
+  if (gate === "2") return "Gate 2";
+
+  return "Unknown Gate";
+}
+
+const gateId = getGateId();
+gateBadge.innerText = gateId;
+statusEl.innerText = "System ready • " + gateId;
+
+/* ================= UTIL ================= */
+
+function wait(ms){
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function setStatus(t){
+  statusEl.innerText = t;
+}
+
+/* ================= CAMERA ================= */
+
+async function stopCamera(){
+  if(stream){
+    stream.getTracks().forEach(t => t.stop());
+  }
+  stream = null;
+  cameraBox.innerHTML = "Camera stopped";
+}
+
+async function startCamera(mode){
+  await stopCamera();
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: { ideal: mode } },
+    audio: false
+  });
+
+  const video = document.createElement("video");
+  video.autoplay = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+
+  cameraBox.innerHTML = "";
+  cameraBox.appendChild(video);
+
+  await video.play();
+  await wait(200);
+
+  return video;
+}
+
+function capture(video){
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video,0,0);
+
+  return canvas.toDataURL("image/jpeg",0.85);
+}
+
+/* ================= SCAN FLOW ================= */
+
+async function scanGuest(){
+
+  if(running) return;
+  running = true;
+  scanBtn.disabled = true;
+
+  try{
+
+    /* STEP 1: REAR CAMERA */
+    setStatus("Opening rear camera...");
+    const rearVideo = await startCamera("environment");
+    await wait(2000);
+    const rearSnapshot = capture(rearVideo);
+
+    /* STEP 2: STOP REAR */
+    await stopCamera();
+    await wait(300);
+
+    /* STEP 3: FRONT CAMERA */
+    setStatus("Capturing guest face...");
+    const frontVideo = await startCamera("user");
+    await wait(1800);
+    const frontSnapshot = capture(frontVideo);
+
+    await stopCamera();
+
+    /* STEP 4: FINAL */
+    setStatus("Scan Completed ✔");
+
+    const visitor = {
+      gateId,
+      time: new Date().toISOString(),
+      rearSnapshot,
+      frontSnapshot,
+      action: "Guest Entry"
+    };
+
+    console.log("VISITOR:", visitor);
+
+    cameraBox.innerHTML = `
+      <div style="color:#22c55e;text-align:center;padding:20px;">
+        ✔ Scan Completed<br/>
+        <small>${gateId}</small>
+      </div>
+    `;
+
+  }catch(err){
+    console.error(err);
+    setStatus("Error occurred ❌");
+  }
+
+  running = false;
+  scanBtn.disabled = false;
+}
+
+/* ================= EVENTS ================= */
+
+scanBtn.addEventListener("click", scanGuest);
+
+</script>
 
 </body>
 </html>
