@@ -9,6 +9,7 @@
         .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .btn { width: 100%; padding: 20px; border-radius: 15px; border: none; background: #6366f1; color: white; font-weight: bold; margin-bottom: 10px; cursor: pointer; }
         #video { width: 100%; border-radius: 15px; display: none; }
+        .log-img { width: 100px; height: 100px; object-fit: cover; border-radius: 10px; margin-top: 5px; }
     </style>
 </head>
 <body>
@@ -16,45 +17,79 @@
     <div class="card">
         <h1>Aaryan's House</h1>
         <button class="btn" onclick="askPermission()">ENABLE NOTIFICATIONS</button>
-        <button class="btn" onclick="triggerTestNotification()">TEST NOTIFICATION</button>
+        <button class="btn" id="startBtn" onclick="processEntry()">START SCANNING</button>
+        <video id="video" autoplay playsinline></video>
+        <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
-    <script>
-        // 1. Permission lene ke liye
-        async function askPermission() {
+    <div class="card">
+        <h3>Recent Visitors</h3>
+        <div id="logs">Loading...</div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+            projectId: "gatepass-saas",
+            messagingSenderId: "788886920648",
+            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Notification Permission
+        window.askPermission = async () => {
             const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-                alert("Notifications enabled!");
-            } else {
-                alert("Permission denied!");
-            }
-        }
+            if (permission === "granted") alert("Notifications enabled!");
+        };
 
-        // 2. Notification trigger karne ke liye
-        async function triggerTestNotification() {
-            if (Notification.permission === "granted") {
-                const registration = await navigator.serviceWorker.getRegistration();
-                if (registration) {
-                    registration.showNotification("Gate Alert!", {
-                        body: "Naya guest entry hua hai!",
-                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-                    });
-                } else {
-                    // Agar service worker na mile, toh basic notification
-                    new Notification("Gate Alert!", {
-                        body: "Naya guest entry hua hai!",
-                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
-                    });
+        // Scanner & Snapshot Logic
+        window.processEntry = async () => {
+            const video = document.getElementById('video');
+            const canvas = document.getElementById('canvas');
+            video.style.display = 'block';
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+            video.srcObject = stream;
+            
+            setTimeout(async () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                
+                await addDoc(collection(db, "logs"), {
+                    timestamp: new Date(),
+                    snapshot: canvas.toDataURL('image/jpeg'),
+                    action: "Guest Entry"
+                });
+                
+                stream.getTracks().forEach(t => t.stop());
+                video.style.display = 'none';
+                
+                // Trigger Notification after snapshot
+                if (Notification.permission === "granted") {
+                    new Notification("Gate Alert!", { body: "Naya guest entry hua hai!" });
                 }
-            } else {
-                alert("Pehle notifications enable karein!");
-            }
-        }
+                alert("Snapshot saved!");
+            }, 2000);
+        };
 
-        // Service Worker Register karne ke liye
+        // Load Logs
+        onSnapshot(query(collection(db, "logs"), orderBy("timestamp", "desc"), limit(5)), (snap) => {
+            const logsDiv = document.getElementById("logs");
+            logsDiv.innerHTML = "";
+            snap.forEach(doc => {
+                const data = doc.data();
+                logsDiv.innerHTML += `<div><p>Guest Entry</p>${data.snapshot ? `<img src="${data.snapshot}" class="log-img">` : ""}</div>`;
+            });
+        });
+
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('firebase-messaging-sw.js')
-            .then(() => console.log('Service Worker Registered'));
+            navigator.serviceWorker.register('firebase-messaging-sw.js');
         }
     </script>
 </body>
