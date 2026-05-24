@@ -64,15 +64,6 @@ body{
   box-shadow:0 10px 30px rgba(0,0,0,0.3);
 }
 
-/* GATE */
-.badge{
-  padding:4px 10px;
-  border-radius:20px;
-  background:#1f2a44;
-  font-size:12px;
-  color:var(--muted);
-}
-
 /* BUTTON */
 .button{
   width:100%;
@@ -84,14 +75,8 @@ body{
   color:white;
   font-size:16px;
   font-weight:600;
-  cursor:pointer;
 }
 
-.button:disabled{
-  opacity:0.6;
-}
-
-/* STATUS */
 .status{
   margin-top:10px;
   font-size:13px;
@@ -99,7 +84,6 @@ body{
   text-align:center;
 }
 
-/* CAMERA BOX */
 .camera-box{
   height:180px;
   border-radius:16px;
@@ -109,7 +93,6 @@ body{
   align-items:center;
   justify-content:center;
   color:var(--muted);
-  border:1px solid rgba(255,255,255,0.05);
   overflow:hidden;
 }
 
@@ -126,7 +109,6 @@ video{
 
 <div class="app">
 
-  <!-- HEADER -->
   <div class="header">
     <div>
       <div class="title">Aaryan's House</div>
@@ -135,82 +117,75 @@ video{
     <div class="status-dot"></div>
   </div>
 
-  <!-- GATE INFO -->
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;">
-      <div>
-        <div style="font-weight:600;">Active Gate</div>
-        <div style="font-size:12px;color:#94A3B8;">Detected via QR</div>
-      </div>
-      <div class="badge" id="gateBadge">Gate: --</div>
-    </div>
-  </div>
-
-  <!-- MAIN CONTROL -->
   <div class="card">
     <button class="button" id="scanBtn">SCAN GUEST</button>
     <div class="status" id="status">System ready</div>
-
-    <div class="camera-box" id="cameraBox">
-      Camera preview placeholder
-    </div>
+    <div class="camera-box" id="cameraBox">Camera preview</div>
   </div>
 
 </div>
 
-<script>
-/* ================= CORE STATE ================= */
+<script type="module">
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuYYn6V3jqUs47fnVFw1OlCywfyDX6ix0",
+  authDomain: "gatepass-saas.firebaseapp.com",
+  projectId: "gatepass-saas",
+  storageBucket: "gatepass-saas.appspot.com",
+  messagingSenderId: "788886920648",
+  appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 let stream = null;
 let running = false;
 
 const statusEl = document.getElementById("status");
-const scanBtn = document.getElementById("scanBtn");
-const cameraBox = document.getElementById("cameraBox");
-const gateBadge = document.getElementById("gateBadge");
-
-/* ================= GATE DETECTION ================= */
-
-function getGateId() {
-  const params = new URLSearchParams(window.location.search);
-  const gate = params.get("gate");
-
-  if (gate === "1") return "Gate 1";
-  if (gate === "2") return "Gate 2";
-
-  return "Unknown Gate";
-}
-
-const gateId = getGateId();
-gateBadge.innerText = gateId;
-statusEl.innerText = "System ready • " + gateId;
+const btn = document.getElementById("scanBtn");
+const box = document.getElementById("cameraBox");
 
 /* ================= UTIL ================= */
+
+function setStatus(t){
+  statusEl.textContent = t;
+}
 
 function wait(ms){
   return new Promise(r => setTimeout(r, ms));
 }
 
-function setStatus(t){
-  statusEl.innerText = t;
+/* ================= GATE ================= */
+
+function getGateId(){
+  const g = new URLSearchParams(location.search).get("gate");
+  if(g === "1") return "Gate 1";
+  if(g === "2") return "Gate 2";
+  return "Unknown Gate";
 }
+
+const gateId = getGateId();
 
 /* ================= CAMERA ================= */
 
-async function stopCamera(){
+async function stopCam(){
   if(stream){
     stream.getTracks().forEach(t => t.stop());
   }
   stream = null;
-  cameraBox.innerHTML = "Camera stopped";
+  box.innerHTML = "Camera stopped";
 }
 
-async function startCamera(mode){
-  await stopCamera();
+async function startCam(mode){
+  await stopCam();
 
   stream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: mode } },
-    audio: false
+    video:{facingMode:{ideal:mode}},
+    audio:false
   });
 
   const video = document.createElement("video");
@@ -218,86 +193,77 @@ async function startCamera(mode){
   video.playsInline = true;
   video.srcObject = stream;
 
-  cameraBox.innerHTML = "";
-  cameraBox.appendChild(video);
+  box.innerHTML = "";
+  box.appendChild(video);
 
   await video.play();
-  await wait(200);
-
   return video;
 }
 
 function capture(video){
-  const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video,0,0);
-
-  return canvas.toDataURL("image/jpeg",0.85);
+  const c = document.createElement("canvas");
+  c.width = video.videoWidth;
+  c.height = video.videoHeight;
+  c.getContext("2d").drawImage(video,0,0);
+  return c.toDataURL("image/jpeg",0.85);
 }
 
-/* ================= SCAN FLOW ================= */
+/* ================= MAIN FLOW ================= */
 
-async function scanGuest(){
+async function scan(){
 
   if(running) return;
   running = true;
-  scanBtn.disabled = true;
+  btn.disabled = true;
 
   try{
 
-    /* STEP 1: REAR CAMERA */
     setStatus("Opening rear camera...");
-    const rearVideo = await startCamera("environment");
+    const rear = await startCam("environment");
     await wait(2000);
-    const rearSnapshot = capture(rearVideo);
+    const rearSnap = capture(rear);
 
-    /* STEP 2: STOP REAR */
-    await stopCamera();
+    await stopCam();
     await wait(300);
 
-    /* STEP 3: FRONT CAMERA */
-    setStatus("Capturing guest face...");
-    const frontVideo = await startCamera("user");
+    setStatus("Capturing face...");
+    const front = await startCam("user");
     await wait(1800);
-    const frontSnapshot = capture(frontVideo);
+    const frontSnap = capture(front);
 
-    await stopCamera();
+    await stopCam();
 
-    /* STEP 4: FINAL */
-    setStatus("Scan Completed ✔");
+    setStatus("Uploading to cloud...");
 
-    const visitor = {
+    const data = {
       gateId,
-      time: new Date().toISOString(),
-      rearSnapshot,
-      frontSnapshot,
+      timestamp: new Date().toISOString(),
+      rearSnapshot: rearSnap,
+      frontSnapshot: frontSnap,
       action: "Guest Entry"
     };
 
-    console.log("VISITOR:", visitor);
+    /* ================= FIREBASE LOG ================= */
+    await addDoc(collection(db,"logs"), data);
 
-    cameraBox.innerHTML = `
-      <div style="color:#22c55e;text-align:center;padding:20px;">
-        ✔ Scan Completed<br/>
-        <small>${gateId}</small>
-      </div>
-    `;
+    /* ================= REALTIME ALERT ================= */
+    await addDoc(collection(db,"alerts"), {
+      ...data,
+      status:"new"
+    });
 
-  }catch(err){
-    console.error(err);
-    setStatus("Error occurred ❌");
+    setStatus("Done ✔");
+
+  }catch(e){
+    console.error(e);
+    setStatus("Error ❌");
   }
 
   running = false;
-  scanBtn.disabled = false;
+  btn.disabled = false;
 }
 
-/* ================= EVENTS ================= */
-
-scanBtn.addEventListener("click", scanGuest);
+btn.addEventListener("click",scan);
 
 </script>
 
