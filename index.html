@@ -16,7 +16,7 @@
     <div class="card">
         <h1>Aaryan's House</h1>
         <button class="btn" id="startBtn" onclick="processEntry()">START SCANNING</button>
-        <video id="video" autoplay playsinline></video>
+        <video id="video" autoplay playsinline muted></video>
         <canvas id="canvas" style="display:none;"></canvas>
     </div>
 
@@ -33,8 +33,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
-        let currentStream = null; // Global stream variable
 
         window.requestNotificationPermission = async () => {
             if (Notification.permission !== "granted") {
@@ -45,26 +43,21 @@
         window.processEntry = async () => {
             const video = document.getElementById('video');
             const canvas = document.getElementById('canvas');
-            
-            // Purana stream ho toh band karein
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-
             video.style.display = 'block';
             
             try {
-                currentStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment" } 
+                // Rear camera access
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: { exact: "environment" } } 
                 });
-                video.srcObject = currentStream;
-            } catch (err) {
-                alert("Camera Error: " + err.message);
-                return;
+                video.srcObject = stream;
+            } catch (e) {
+                // Fallback to any camera if 'exact' environment fails
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
             }
             
             setTimeout(async () => {
-                // Snapshot lein
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
@@ -75,17 +68,22 @@
                     action: "Guest Entry"
                 });
                 
-                // Notification trigger
-                if (Notification.permission === "granted") {
-                    new Notification("Gate Alert!", { body: "Naya guest scan hua hai!" });
-                }
-
-                // Camera Stop (Safe way)
-                currentStream.getTracks().forEach(track => track.stop());
+                // Aggressive Stream Cleanup
+                const tracks = video.srcObject.getTracks();
+                tracks.forEach(track => {
+                    track.stop();
+                    track.enabled = false;
+                });
                 video.srcObject = null;
                 video.style.display = 'none';
-                currentStream = null;
                 
+                // Final Notification Trigger
+                if (Notification.permission === "granted") {
+                    new Notification("Gate Alert!", { 
+                        body: "Naya guest scan hua hai!",
+                        icon: "https://cdn-icons-png.flaticon.com/512/2991/2991148.png"
+                    });
+                }
             }, 3000);
         };
     </script>
