@@ -1,78 +1,371 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Gate Security App</title>
-    <style>
-        body { font-family: sans-serif; background: #1a1a1a; color: white; text-align: center; padding: 20px; }
-        .btn { padding: 15px; margin: 10px; width: 80%; border-radius: 10px; border: none; background: #4f46e5; color: white; font-weight: bold; }
-        #video { width: 100%; border-radius: 10px; display: none; margin-top: 10px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Aaryan's House - Gate Security</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #0f172a;
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 420px;
+      background: #1e293b;
+      border-radius: 18px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    p {
+      color: #cbd5e1;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+
+    #video {
+      width: 100%;
+      border-radius: 14px;
+      background: black;
+      display: none;
+      margin-bottom: 15px;
+    }
+
+    .status {
+      margin: 15px 0;
+      font-size: 14px;
+      color: #93c5fd;
+      min-height: 20px;
+    }
+
+    button {
+      width: 100%;
+      padding: 16px;
+      border: none;
+      border-radius: 12px;
+      background: #2563eb;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:disabled {
+      background: #475569;
+      cursor: not-allowed;
+    }
+
+    .success {
+      color: #4ade80;
+    }
+
+    .error {
+      color: #f87171;
+    }
+  </style>
 </head>
 <body>
 
-    <div class="card">
-        <h1>Gate Security</h1>
-        <button class="btn" onclick="setupSystem()">1. SETUP PERMISSIONS</button>
-        <button class="btn" onclick="runCompleteScan()">2. START SCANNING</button>
-        <video id="video" autoplay playsinline muted></video>
+  <div class="container">
+    <h1>Gate Security System</h1>
+    <p>Aaryan's House</p>
+
+    <video id="video" autoplay playsinline muted></video>
+
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <div class="status" id="status">
+      Ready to scan guest.
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    <button id="scanBtn">
+      Scan Guest
+    </button>
+  </div>
 
-        const db = getFirestore(initializeApp({
-            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
-            projectId: "gatepass-saas",
-            messagingSenderId: "788886920648",
-            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
-        }));
+  <!-- Firebase SDK -->
+  <script type="module">
 
-        // Permissions Setup
-        window.setupSystem = async () => {
-            await Notification.requestPermission();
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(t => t.stop());
-            alert("Permissions Configured!");
-        };
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 
-        // Complete Scan Logic
-        window.runCompleteScan = async () => {
-            const video = document.getElementById('video');
-            const canvas = document.createElement('canvas');
-            
-            // 1. Camera Start
-            video.style.display = 'block';
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { facingMode: { ideal: "environment" } } 
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // =====================================================
+    // FIREBASE CONFIG
+    // =====================================================
+
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // =====================================================
+    // INIT FIREBASE
+    // =====================================================
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // =====================================================
+    // DOM REFERENCES
+    // =====================================================
+
+    const scanBtn = document.getElementById("scanBtn");
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const statusText = document.getElementById("status");
+
+    let currentStream = null;
+    let isProcessing = false;
+
+    // =====================================================
+    // HELPER FUNCTIONS
+    // =====================================================
+
+    function setStatus(message, type = "") {
+      statusText.textContent = message;
+      statusText.className = `status ${type}`;
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // =====================================================
+    // CAMERA START
+    // =====================================================
+
+    async function startCamera() {
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: {
+            ideal: "environment"
+          },
+          width: {
+            ideal: 1280
+          },
+          height: {
+            ideal: 720
+          }
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      currentStream = stream;
+
+      video.srcObject = stream;
+      video.style.display = "block";
+
+      await video.play();
+
+      return stream;
+    }
+
+    // =====================================================
+    // CAPTURE FRAME
+    // =====================================================
+
+    function captureSnapshot() {
+
+      const context = canvas.getContext("2d");
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      return canvas.toDataURL("image/jpeg", 0.8);
+    }
+
+    // =====================================================
+    // STOP CAMERA AGGRESSIVELY
+    // =====================================================
+
+    async function stopCamera() {
+
+      try {
+
+        if (currentStream) {
+
+          currentStream.getTracks().forEach(track => {
+            track.stop();
+          });
+
+          currentStream = null;
+        }
+
+        video.pause();
+
+        video.srcObject = null;
+
+        video.style.display = "none";
+
+        // Small delay to ensure hardware release
+        await wait(200);
+
+      } catch (error) {
+        console.error("Camera cleanup error:", error);
+      }
+    }
+
+    // =====================================================
+    // SAVE TO FIRESTORE
+    // =====================================================
+
+    async function saveLog(snapshotData) {
+
+      await addDoc(collection(db, "logs"), {
+        timestamp: serverTimestamp(),
+        snapshot: snapshotData,
+        action: "Guest Entry"
+      });
+
+    }
+
+    // =====================================================
+    // PUSH NOTIFICATION
+    // =====================================================
+
+    async function pushNotification() {
+
+      try {
+
+        if (!("Notification" in window)) {
+          return;
+        }
+
+        if (Notification.permission === "default") {
+          await Notification.requestPermission();
+        }
+
+        if (Notification.permission === "granted") {
+
+          // Slight decoupled timeout
+          setTimeout(() => {
+
+            new Notification("Gate Alert!", {
+              body: "Guest entry captured successfully.",
+              icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png"
             });
-            video.srcObject = stream;
 
-            // 2. Snapshot Logic
-            setTimeout(async () => {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                canvas.getContext('2d').drawImage(video, 0, 0);
+          }, 300);
+        }
 
-                // 3. Upload
-                await addDoc(collection(db, "logs"), {
-                    timestamp: new Date(),
-                    snapshot: canvas.toDataURL('image/jpeg')
-                });
+      } catch (error) {
+        console.error("Notification error:", error);
+      }
+    }
 
-                // 4. Cleanup (Camera off)
-                stream.getTracks().forEach(t => t.stop());
-                video.style.display = 'none';
+    // =====================================================
+    // MAIN FLOW
+    // =====================================================
 
-                // 5. Notification (Stream band hone ke baad)
-                setTimeout(() => {
-                    if(Notification.permission === "granted") {
-                        new Notification("Gate Alert", { body: "Guest Entry Captured!" });
-                    }
-                }, 100);
-            }, 2000);
-        };
-    </script>
+    async function handleGuestScan() {
+
+      if (isProcessing) return;
+
+      isProcessing = true;
+
+      scanBtn.disabled = true;
+
+      try {
+
+        setStatus("Opening camera...");
+
+        // STEP 1: START CAMERA
+        await startCamera();
+
+        setStatus("Camera active. Capturing in 3 seconds...");
+
+        // STEP 2: WAIT
+        await wait(3000);
+
+        setStatus("Capturing snapshot...");
+
+        // STEP 3: CAPTURE
+        const snapshot = captureSnapshot();
+
+        setStatus("Uploading to database...");
+
+        // STEP 4: DATABASE WRITE
+        await saveLog(snapshot);
+
+        setStatus("Releasing camera hardware...");
+
+        // STEP 5: CLEAN CAMERA SHUTDOWN
+        await stopCamera();
+
+        setStatus("Sending notification...");
+
+        // STEP 6: NOTIFICATION
+        await pushNotification();
+
+        setStatus("Guest entry completed successfully.", "success");
+
+      } catch (error) {
+
+        console.error(error);
+
+        await stopCamera();
+
+        setStatus(
+          "Error: " + (error.message || "Something went wrong."),
+          "error"
+        );
+
+      } finally {
+
+        scanBtn.disabled = false;
+
+        isProcessing = false;
+      }
+    }
+
+    // =====================================================
+    // EVENT LISTENER
+    // =====================================================
+
+    scanBtn.addEventListener("click", handleGuestScan);
+
+  </script>
+
 </body>
 </html>
