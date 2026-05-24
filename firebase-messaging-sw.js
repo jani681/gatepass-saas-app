@@ -1,4 +1,3 @@
-// Import Firebase scripts from CDN
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js');
 
@@ -12,14 +11,14 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Background Notification Handler
+// Background notification handle karne ke liye
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
     
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/logo.png' // Agar aapke paas icon hai, warna ye line hata sakte hain
+        icon: '/logo.png' 
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
