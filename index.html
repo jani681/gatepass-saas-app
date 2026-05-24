@@ -3,62 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Gate Terminal</title>
+    <title>GatePass App</title>
     <style>
-        :root { --bg: #050505; --accent: #00f2fe; --text: #ffffff; }
-        body { background-color: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .terminal { text-align: center; width: 90%; max-width: 400px; padding: 2rem; background: #111; border-radius: 20px; }
-        .ring-btn { width: 120px; height: 120px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: #000; }
-        .error { color: #ff4d4d; font-weight: bold; margin-bottom: 1rem; }
+        :root { --primary: #6366f1; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; }
+        .app-container { max-width: 400px; margin: auto; }
+        .view { display: none; }
+        .active { display: block; }
+        .btn { width: 100%; padding: 18px; border-radius: 12px; border: none; background: var(--card); box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 12px; font-weight: 600; cursor: pointer; text-align: left; }
+        .btn-primary { background: var(--primary); color: white; }
     </style>
 </head>
 <body>
-    <div class="terminal" id="app">
-        <h2 id="gateTitle">Loading...</h2>
-        <p id="statusLabel">Checking configuration...</p>
-        <button class="ring-btn" id="ringBell">RING</button>
+
+    <div class="app-container">
+        <div id="homeView" class="view active">
+            <h1>GatePass</h1>
+            <p>Select Mode</p>
+            <button class="btn" onclick="switchView('terminalView')">Visitor Terminal 🔔</button>
+            <button class="btn" onclick="switchView('dashboardView')">Resident Dashboard 📱</button>
+            <button class="btn btn-primary" onclick="switchView('adminView')">Admin Panel ⚙️</button>
+        </div>
+
+        <div id="terminalView" class="view">
+            <button onclick="switchView('homeView')">← Back</button>
+            <h2>Visitor Terminal</h2>
+            <button class="btn btn-primary" onclick="ringBell()">RING BELL</button>
+        </div>
+
+        <div id="adminView" class="view">
+            <button onclick="switchView('homeView')">← Back</button>
+            <h2>Admin Panel</h2>
+            <input type="text" id="bName" placeholder="Building Name" style="width:100%; padding:10px; margin-bottom:10px;">
+            <button class="btn" onclick="addBuilding()">Register Building</button>
+        </div>
     </div>
 
     <script type="module">
-        import { db } from './firebase-config.js';
-        import { collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        // Firebase Modular SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        // URL Parameters Extraction
-        const urlParams = new URLSearchParams(window.location.search);
-        const accountId = urlParams.get('id');
-        const gateName = urlParams.get('gate');
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
+            authDomain: "gatepass-saas.firebaseapp.com",
+            projectId: "gatepass-saas",
+            storageBucket: "gatepass-saas.appspot.com",
+            messagingSenderId: "788886920648",
+            appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
+        };
 
-        const appDiv = document.getElementById('app');
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
-        if (!accountId || !gateName) {
-            appDiv.innerHTML = `<h1 class='error'>Routing Error</h1><p>Missing Gate Configuration.</p><p style="font-size:0.8rem; color:#666;">Please use a valid link from Admin Dashboard.</p>`;
-        } else {
-            document.getElementById('gateTitle').innerText = decodeURIComponent(gateName);
-            document.getElementById('statusLabel').innerText = "System Ready";
+        // UI Switching Logic
+        window.switchView = (viewId) => {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+        };
 
-            document.getElementById('ringBell').addEventListener('click', async () => {
-                const btn = document.getElementById('ringBell');
-                btn.disabled = true;
-                document.getElementById('statusLabel').innerText = "Sending signal...";
-                
-                try {
-                    await addDoc(collection(db, "logs"), {
-                        accountId: accountId,
-                        gateName: decodeURIComponent(gateName),
-                        timestamp: new Date().toISOString(),
-                        status: "pending"
-                    });
-                    document.getElementById('statusLabel').innerText = "Notification Sent!";
-                    setTimeout(() => {
-                        document.getElementById('statusLabel').innerText = "System Ready";
-                        btn.disabled = false;
-                    }, 3000);
-                } catch (e) {
-                    document.getElementById('statusLabel').innerText = "Connection Failed!";
-                    btn.disabled = false;
-                }
-            });
-        }
+        // Functional Logic
+        window.addBuilding = async () => {
+            const name = document.getElementById("bName").value;
+            await addDoc(collection(db, "users"), { buildingName: name, timestamp: new Date().toISOString() });
+            alert("Added!");
+        };
+
+        window.ringBell = async () => {
+            alert("Ringing...");
+            // Log logic here
+        };
     </script>
 </body>
 </html>
