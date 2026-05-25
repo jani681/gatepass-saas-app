@@ -9,7 +9,6 @@ content="width=device-width, initial-scale=1.0"/>
 
 <title>Gate Device - Aaryan House</title>
 
-<!-- PWA -->
 <meta name="theme-color" content="#0B1220"/>
 
 <link rel="manifest" href="manifest.json"/>
@@ -163,6 +162,12 @@ import {
 }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+import {
+  getMessaging,
+  getToken
+}
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
+
 /* ================= CONFIG ================= */
 
 const firebaseConfig = {
@@ -174,8 +179,14 @@ const firebaseConfig = {
   appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
 };
 
+const VAPID_PUBLIC_KEY =
+"BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
+
 const app = initializeApp(firebaseConfig);
+
 const db = getFirestore(app);
+
+const messaging = getMessaging(app);
 
 /* ================= UI ================= */
 
@@ -216,18 +227,100 @@ const CURRENT_GATE = getGateId();
 
 gateLabel.innerText = CURRENT_GATE;
 
+/* ================= PUSH NOTIFICATION ENGINE ================= */
+
+async function setupPushNotifications() {
+
+  if (!("Notification" in window)) return;
+
+  try {
+
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+
+      const currentToken = await getToken(messaging, {
+        vapidKey: VAPID_PUBLIC_KEY
+      });
+
+      if (currentToken) {
+
+        console.log(
+          "Web Push Channel Active. Token:",
+          currentToken
+        );
+
+      } else {
+
+        console.warn(
+          "No registration token available."
+        );
+      }
+    }
+
+  } catch (err) {
+
+    console.error(
+      "An error occurred while retrieving token:",
+      err
+    );
+  }
+}
+
+window.addEventListener(
+  "DOMContentLoaded",
+  setupPushNotifications
+);
+
+/* ================= LOCAL NOTIFICATION ================= */
+
+function triggerNotification(){
+
+  setTimeout(()=>{
+
+    try{
+
+      if(Notification.permission === "granted"){
+
+        new Notification("Gate Alert!",{
+          body:
+          `${CURRENT_GATE}: Guest entry captured successfully.`,
+          icon:
+          "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+          badge:
+          "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+          vibrate:[200,100,200],
+          tag:"gate-alert",
+          renotify:true
+        });
+
+      }
+
+    }catch(err){
+
+      console.error(
+        "Notification dispatch failed:",
+        err
+      );
+    }
+
+  },10);
+
+}
+
 /* ================= PWA INSTALL ================= */
 
-window.addEventListener("beforeinstallprompt", (e)=>{
+window.addEventListener("beforeinstallprompt",(e)=>{
 
   e.preventDefault();
 
   deferredPrompt = e;
 
   installBtn.style.display = "block";
+
 });
 
-installBtn.addEventListener("click", async ()=>{
+installBtn.addEventListener("click",async()=>{
 
   if(!deferredPrompt) return;
 
@@ -238,17 +331,22 @@ installBtn.addEventListener("click", async ()=>{
   deferredPrompt = null;
 
   installBtn.style.display = "none";
+
 });
 
 /* ================= SERVICE WORKER ================= */
 
 if("serviceWorker" in navigator){
 
-  window.addEventListener("load", ()=>{
+  window.addEventListener("load",()=>{
 
     navigator.serviceWorker.register("./sw.js")
-      .then(()=>console.log("SW Registered"))
-      .catch(err=>console.error(err));
+    .then(()=>{
+      console.log("SW Registered");
+    })
+    .catch(err=>{
+      console.error(err);
+    });
 
   });
 
@@ -265,6 +363,7 @@ async function stopCam(){
   stream = null;
 
   video.pause();
+
   video.srcObject = null;
 
   await wait(300);
@@ -279,8 +378,8 @@ async function startCam(mode){
       facingMode:{
         ideal: mode
       },
-      width:{ ideal: 480 },
-      height:{ ideal: 640 }
+      width:{ ideal:480 },
+      height:{ ideal:640 }
     },
     audio:false
   });
@@ -304,9 +403,9 @@ function capture(){
   canvas.width = width;
   canvas.height = height;
 
-  ctx.drawImage(video, 0, 0, width, height);
+  ctx.drawImage(video,0,0,width,height);
 
-  return canvas.toDataURL("image/jpeg", 0.25);
+  return canvas.toDataURL("image/jpeg",0.25);
 }
 
 /* ================= MAIN ENGINE ================= */
@@ -316,6 +415,7 @@ async function scan(){
   if(running) return;
 
   running = true;
+
   btn.disabled = true;
 
   try{
@@ -354,32 +454,36 @@ async function scan(){
 
       gateId: CURRENT_GATE,
 
-      rearSnapshot: rearSnapshot.substring(0,150000),
+      rearSnapshot:
+      rearSnapshot.substring(0,150000),
 
-      frontSnapshot: frontSnapshot.substring(0,150000),
+      frontSnapshot:
+      frontSnapshot.substring(0,150000),
 
-      action: "Guest Entry",
+      action:"Guest Entry",
 
-      visitorType: "unknown",
+      visitorType:"unknown",
 
-      confidence: 0,
+      confidence:0,
 
-      status: "new",
+      status:"new",
 
-      device: "gate-device"
+      device:"gate-device"
     };
 
     /* FIREBASE */
 
     setStatus("Uploading to database...");
 
-    await addDoc(collection(db,"logs"), data);
+    await addDoc(collection(db,"logs"),data);
 
-    await addDoc(collection(db,"alerts"), data);
+    await addDoc(collection(db,"alerts"),data);
 
     /* SUCCESS */
 
     setStatus("Entry Recorded ✔");
+
+    triggerNotification();
 
     alert("Guest captured successfully");
 
@@ -395,12 +499,13 @@ async function scan(){
   }
 
   running = false;
+
   btn.disabled = false;
 }
 
 /* ================= EVENT ================= */
 
-btn.addEventListener("click", scan);
+btn.addEventListener("click",scan);
 
 </script>
 
