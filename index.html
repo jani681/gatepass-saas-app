@@ -86,6 +86,7 @@ h2{
   margin-top:16px;
   box-shadow:0 10px 25px rgba(0,0,0,0.35);
   border: 1px solid #1E293B;
+  position: relative;
 }
 
 video{
@@ -95,6 +96,42 @@ video{
   margin-top:10px;
   aspect-ratio:3/4;
   object-fit:cover;
+}
+
+/* Fix for Black Screen Overlay */
+.video-overlay {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  height: calc(100% - 175px); /* Adjust based on video aspect ratio */
+  background: rgba(11, 18, 32, 0.9);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+.video-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.overlay-icon {
+  font-size: 32px;
+  animation: pulse 1.5s infinite;
+}
+
+.overlay-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3B82F6;
 }
 
 button{
@@ -115,12 +152,35 @@ button:disabled{
   opacity:0.7;
 }
 
+/* Enhanced Status Bar with Spinner Layout */
+.status-container {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
 .status{
-  margin-top:14px;
   text-align:center;
   font-size:13px;
   color:#94A3B8;
-  min-height:20px;
+}
+
+/* Spinner Element */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1E293B;
+  border-top: 2px solid #3B82F6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: none;
+}
+
+.spinner.active {
+  display: inline-block;
 }
 
 .gate-badge{
@@ -257,14 +317,71 @@ button:disabled{
   text-decoration: none;
 }
 
+/* Meta Badge indicators for About dialog */
+.meta-badge-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed #1E293B;
+}
+
+.meta-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #E2E8F0;
+}
+
+.meta-badge span {
+  color: #10B981;
+}
+
+/* ================= CUSTOM TOAST NOTIFICATION ================= */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #10B981;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2000;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
+}
+
+.toast-container.active {
+  transform: translateX(-50%) translateY(0);
+}
+
 /* ================= COMMERCIAL FOOTER ================= */
 footer {
   margin-top: auto;
   padding: 24px 0 8px 0;
   text-align: center;
-  font-size: 12px;
+  font-size: 11px; /* Thoda chhota scale */
   color: #64748B;
   line-height: 1.6;
+}
+
+/* Keyframes animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
 }
 </style>
 </head>
@@ -274,13 +391,13 @@ footer {
 <div class="app">
 
   <div class="header-section">
-    <h2 id="mainHeading">🚪 Gate Scanner</h2>
+    <h2 id="mainHeading">OnyxStack GatePass</h2>
     <div class="sub">Visitor Management & Gate Pass System</div>
     <div class="brand-sub">Powered by OnyxStack Labs</div>
     
-    <button class="settings-trigger" id="openModalBtn" aria-label="About Settings">
+    <button class="settings-trigger" id="openModalBtn" aria-label="About Info">
       <svg width="22" height="22" viewBox="0 0 24 24">
-        <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5A3.5 3.5 0 0 1 15.5 12A3.5 3.5 0 0 1 12 15.5M19.43 12.98C19.47 12.66 19.5 12.34 19.5 12C19.5 11.66 19.47 11.34 19.43 11.02L21.54 9.37C21.73 9.22 21.78 8.95 21.66 8.73L19.66 5.27C19.54 5.05 19.27 4.96 19.05 5.05L16.56 6.05C16.04 5.66 15.47 5.34 14.86 5.08L14.48 2.42C14.44 2.18 14.24 2 14 2H10C9.76 2 9.56 2.18 9.52 2.42L9.14 5.08C8.53 5.34 7.96 5.66 7.44 6.05L4.95 5.05C4.73 4.96 4.46 5.05 4.34 5.27L2.34 8.73C2.21 8.95 2.27 9.22 2.46 9.37L4.57 11.02C4.53 11.34 4.5 11.67 4.5 12C4.5 12.33 4.53 12.66 4.57 12.98L2.46 14.63C2.27 14.78 2.21 15.05 2.34 15.27L4.34 18.73C4.46 18.95 4.73 19.03 4.95 18.95L7.44 17.95C7.96 18.34 8.53 18.66 9.14 18.92L9.52 21.58C9.56 21.82 9.76 22 10 22H14C14.24 22 14.44 21.82 14.48 21.58L14.86 18.92C15.47 18.66 16.04 18.34 16.56 17.95L19.05 18.95C19.27 19.03 19.54 18.95 19.66 18.73L21.66 15.27C21.78 15.05 21.73 14.78 21.54 14.63L19.43 12.98Z"/>
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
       </svg>
     </button>
   </div>
@@ -290,6 +407,11 @@ footer {
   </div>
 
   <div class="card">
+    <div class="video-overlay" id="videoOverlay">
+      <div class="overlay-icon">📸</div>
+      <div class="overlay-text">Ready for Next Visitor</div>
+    </div>
+
     <video id="video" autoplay playsinline muted></video>
     <canvas id="canvas" style="display:none;"></canvas>
 
@@ -301,8 +423,9 @@ footer {
       Install App
     </button>
 
-    <div class="status" id="status">
-      Ready
+    <div class="status-container">
+      <div class="spinner" id="statusSpinner"></div>
+      <div class="status" id="status">Ready</div>
     </div>
   </div>
 
@@ -325,6 +448,10 @@ footer {
 
 </div>
 
+<div class="toast-container" id="customToast">
+  <span>✔</span> <span id="toastMessage">Visitor registered successfully</span>
+</div>
+
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-header">
@@ -340,7 +467,14 @@ footer {
         <div class="info-label">Version</div>
         <div class="info-value">1.0</div>
       </div>
-      <div class="info-row">
+      
+      <div class="meta-badge-container">
+        <div class="meta-badge">Build: 2025.07</div>
+        <div class="meta-badge">Firebase Connected <span>✔</span></div>
+        <div class="meta-badge">Camera Access <span>✔</span></div>
+      </div>
+
+      <div class="info-row" style="margin-top: 14px;">
         <div class="info-label">Developed By</div>
         <div class="info-value">OnyxStack Labs</div>
       </div>
@@ -394,14 +528,17 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const btn = document.getElementById("scanBtn");
 const status = document.getElementById("status");
+const statusSpinner = document.getElementById("statusSpinner");
 const gateLabel = document.getElementById("gateLabel");
 const installBtn = document.getElementById("installBtn");
 const mainHeading = document.getElementById("mainHeading");
+const videoOverlay = document.getElementById("videoOverlay");
 
-/* Modal Elements */
+/* Modal & Toast Elements */
 const modalOverlay = document.getElementById("modalOverlay");
 const openModalBtn = document.getElementById("openModalBtn");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const customToast = document.getElementById("customToast");
 
 /* ================= STATE ================= */
 let stream = null;
@@ -411,8 +548,21 @@ let deferredPrompt = null;
 /* ================= HELPERS ================= */
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-function setStatus(text){
+function setStatus(text, showSpinner = false){
   status.innerText = text;
+  if(showSpinner) {
+    statusSpinner.classList.add("active");
+  } else {
+    statusSpinner.classList.remove("active");
+  }
+}
+
+function showToast(message) {
+  document.getElementById("toastMessage").innerText = message;
+  customToast.classList.add("active");
+  setTimeout(() => {
+    customToast.classList.remove("active");
+  }, 3500);
 }
 
 /* ================= ABOUT MODAL INTERACTION ================= */
@@ -430,20 +580,21 @@ modalOverlay.addEventListener("click", (e) => {
   }
 });
 
-/* ================= GATE DETECTION & DYNAMIC HEADER ================= */
+/* ================= GATE DETECTION EXTENSIONS ================= */
 function getGateId(){
   const gate = new URLSearchParams(location.search).get("gate");
   if(gate === "1") return "Gate 1";
   if(gate === "2") return "Gate 2";
+  if(gate === "main") return "Main Gate";
+  if(gate === "back") return "Back Gate";
   return "Unknown Gate";
 }
 
 const CURRENT_GATE = getGateId();
 gateLabel.innerText = CURRENT_GATE;
 
-// Dynamically sets a professional name on top if gate is verified
 if(CURRENT_GATE !== "Unknown Gate") {
-  mainHeading.innerText = `🚪 ${CURRENT_GATE} Scanner`;
+  mainHeading.innerText = CURRENT_GATE;
 }
 
 /* ================= PUSH NOTIFICATION ENGINE ================= */
@@ -457,8 +608,6 @@ async function setupPushNotifications() {
       });
       if (currentToken) {
         console.log("Web Push Channel Active. Token:", currentToken);
-      } else {
-        console.warn("No registration token available.");
       }
     }
   } catch (err) {
@@ -507,16 +656,12 @@ installBtn.addEventListener("click",async()=>{
 if("serviceWorker" in navigator){
   window.addEventListener("load",()=>{
     navigator.serviceWorker.register("./sw.js")
-    .then(()=>{
-      console.log("SW Registered");
-    })
-    .catch(err=>{
-      console.error(err);
-    });
+    .then(()=>{ console.log("SW Registered"); })
+    .catch(err=>{ console.error(err); });
   });
 }
 
-/* ================= CAMERA ================= */
+/* ================= CAMERA ENGINE ================= */
 async function stopCam(){
   if(stream){
     stream.getTracks().forEach(track => track.stop());
@@ -558,24 +703,25 @@ async function scan(){
   if(running) return;
   running = true;
   btn.disabled = true;
+  videoOverlay.classList.remove("active"); // Remove overlay when starting scan
 
   try{
-    /* REAR CAMERA */
-    setStatus("Opening rear camera...");
+    /* REAR CAMERA WITH SPINNER */
+    setStatus("Opening rear camera...", true);
     await startCam("environment");
     await wait(2000);
     const rearSnapshot = capture();
     await stopCam();
     await wait(500);
 
-    /* FRONT CAMERA */
-    setStatus("Capturing guest face...");
+    /* FRONT CAMERA WITH SPINNER */
+    setStatus("Capturing guest face...", true);
     await startCam("user");
     await wait(1800);
     const frontSnapshot = capture();
     await stopCam();
 
-    /* DATA */
+    /* METADATA STRUCTURE */
     const data = {
       timestamp: serverTimestamp(),
       gateId: CURRENT_GATE,
@@ -588,20 +734,26 @@ async function scan(){
       device:"gate-device"
     };
 
-    /* FIREBASE */
-    setStatus("Uploading to database...");
+    /* FIREBASE UPLOAD STATUS */
+    setStatus("Uploading to database...", true);
     await addDoc(collection(db,"logs"),data);
     await addDoc(collection(db,"alerts"),data);
 
-    /* SUCCESS */
-    setStatus("Entry Recorded ✔");
+    /* SUCCESS ACTIONS (Browser Alert Completely Removed) */
+    setStatus("Entry Recorded ✔", false);
+    videoOverlay.classList.add("active"); // Show "Ready for Next Visitor" Overlay instead of Black screen
+    showToast("Visitor registered successfully");
     triggerNotification();
-    alert("Visitor registered successfully");
+
+    /* AUTOMATIC RESET TIMEOUT (2-3 seconds) */
+    setTimeout(() => {
+      setStatus("Ready", false);
+    }, 3000);
 
   }catch(err){
     console.error(err);
-    setStatus("Error uploading data ❌");
-    alert(err.message);
+    setStatus("Error uploading data ❌", false);
+    showToast(`Error: ${err.message}`);
     await stopCam();
   }
 
@@ -609,7 +761,7 @@ async function scan(){
   btn.disabled = false;
 }
 
-/* ================= EVENT ================= */
+/* ================= EVENT INITIALIZER ================= */
 btn.addEventListener("click",scan);
 
 </script>
