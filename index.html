@@ -3,26 +3,18 @@
 <head>
 
 <meta charset="UTF-8" />
-
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0"/>
-
-<title>Gate Device - Aaryan House</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Visitor Management & Gate Pass System</title>
 <meta name="theme-color" content="#0B1220"/>
-
 <link rel="manifest" href="manifest.json"/>
-
-<link rel="apple-touch-icon"
-href="https://cdn-icons-png.flaticon.com/512/6195/6195700.png"/>
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6195/6195700.png"/>
 
 <style>
-
 *{
   margin:0;
   padding:0;
   box-sizing:border-box;
-  font-family:system-ui;
+  font-family:system-ui, -apple-system, sans-serif;
 }
 
 body{
@@ -30,30 +22,70 @@ body{
   color:white;
   display:flex;
   justify-content:center;
+  min-height: 100vh;
 }
 
 .app{
   width:100%;
   max-width:420px;
   padding:16px;
+  display: flex;
+  flex-direction: column;
 }
 
-.card{
-  background:#111A2E;
-  border-radius:18px;
-  padding:16px;
-  margin-top:20px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.35);
+.header-section {
+  position: relative;
+  margin-bottom: 8px;
+}
+
+.settings-trigger {
+  position: absolute;
+  right: 0;
+  top: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  margin-top: 0;
+  width: auto;
+}
+
+.settings-trigger svg {
+  fill: #94A3B8;
+  transition: fill 0.2s;
+}
+
+.settings-trigger:hover svg {
+  fill: #3B82F6;
 }
 
 h2{
   font-size:24px;
+  font-weight: 700;
 }
 
 .sub{
   color:#94A3B8;
   margin-top:4px;
   font-size:13px;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: #3B82F6;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.card{
+  background:#111A2E;
+  border-radius:18px;
+  padding:16px;
+  margin-top:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.35);
+  border: 1px solid #1E293B;
 }
 
 video{
@@ -76,6 +108,7 @@ button{
   font-size:16px;
   font-weight:700;
   cursor:pointer;
+  transition: opacity 0.2s;
 }
 
 button:disabled{
@@ -98,12 +131,141 @@ button:disabled{
   border-radius:999px;
   font-size:12px;
   color:#93C5FD;
+  align-self: flex-start;
 }
 
 .install-btn{
   background:#16A34A;
 }
 
+/* ================= FEATURES HIGHLIGHT GRID ================= */
+.features-container {
+  margin-top: 20px;
+}
+
+.features-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94A3B8;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.feature-item {
+  background: #111A2E;
+  border: 1px solid #1E293B;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ================= ABOUT / SETTINGS MODAL ================= */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(5, 8, 16, 0.85);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding: 16px;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal {
+  background: #111A2E;
+  border: 1px solid #1E293B;
+  border-radius: 18px;
+  padding: 20px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal {
+  transform: scale(1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #1E293B;
+  padding-bottom: 10px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  font-size: 20px;
+  cursor: pointer;
+  width: auto;
+  margin-top: 0;
+  padding: 4px;
+}
+
+.info-row {
+  margin-bottom: 12px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: #94A3B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: white;
+  font-weight: 500;
+}
+
+.info-value a {
+  color: #3B82F6;
+  text-decoration: none;
+}
+
+/* ================= COMMERCIAL FOOTER ================= */
+footer {
+  margin-top: auto;
+  padding: 24px 0 8px 0;
+  text-align: center;
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.6;
+}
 </style>
 </head>
 
@@ -111,10 +273,16 @@ button:disabled{
 
 <div class="app">
 
-  <h2>🚪 Gate Scanner</h2>
-
-  <div class="sub">
-    Aaryan's House Security System
+  <div class="header-section">
+    <h2>🚪 Gate Scanner</h2>
+    <div class="sub">Visitor Management & Gate Pass System</div>
+    <div class="brand-sub">Powered by OnyxStack Labs</div>
+    
+    <button class="settings-trigger" id="openModalBtn" aria-label="About Settings">
+      <svg width="22" height="22" viewBox="0 0 24 24">
+        <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5A3.5 3.5 0 0 1 15.5 12A3.5 3.5 0 0 1 12 15.5M19.43 12.98C19.47 12.66 19.5 12.34 19.5 12C19.5 11.66 19.47 11.34 19.43 11.02L21.54 9.37C21.73 9.22 21.78 8.95 21.66 8.73L19.66 5.27C19.54 5.05 19.27 4.96 19.05 5.05L16.56 6.05C16.04 5.66 15.47 5.34 14.86 5.08L14.48 2.42C14.44 2.18 14.24 2 14 2H10C9.76 2 9.56 2.18 9.52 2.42L9.14 5.08C8.53 5.34 7.96 5.66 7.44 6.05L4.95 5.05C4.73 4.96 4.46 5.05 4.34 5.27L2.34 8.73C2.21 8.95 2.27 9.22 2.46 9.37L4.57 11.02C4.53 11.34 4.5 11.67 4.5 12C4.5 12.33 4.53 12.66 4.57 12.98L2.46 14.63C2.27 14.78 2.21 15.05 2.34 15.27L4.34 18.73C4.46 18.95 4.73 19.03 4.95 18.95L7.44 17.95C7.96 18.34 8.53 18.66 9.14 18.92L9.52 21.58C9.56 21.82 9.76 22 10 22H14C14.24 22 14.44 21.82 14.48 21.58L14.86 18.92C15.47 18.66 16.04 18.34 16.56 17.95L19.05 18.95C19.27 19.03 19.54 18.95 19.66 18.73L21.66 15.27C21.78 15.05 21.73 14.78 21.54 14.63L19.43 12.98Z"/>
+      </svg>
+    </button>
   </div>
 
   <div class="gate-badge" id="gateLabel">
@@ -122,35 +290,71 @@ button:disabled{
   </div>
 
   <div class="card">
-
     <video id="video" autoplay playsinline muted></video>
-
     <canvas id="canvas" style="display:none;"></canvas>
 
     <button id="scanBtn">
       Scan Guest
     </button>
 
-    <button
-      id="installBtn"
-      class="install-btn"
-      style="display:none;"
-    >
+    <button id="installBtn" class="install-btn" style="display:none;">
       Install App
     </button>
 
     <div class="status" id="status">
       Ready
     </div>
-
   </div>
 
+  <div class="features-container">
+    <div class="features-title">System Features</div>
+    <div class="features-grid">
+      <div class="feature-item"><span>📷</span> Camera QR/Photo Capture</div>
+      <div class="feature-item"><span>🆔</span> Visitor Registration</div>
+      <div class="feature-item"><span>🕒</span> Entry Time Logging</div>
+      <div class="feature-item"><span>🚪</span> Gate-wise Access</div>
+      <div class="feature-item"><span>☁️</span> Firebase Database</div>
+      <div class="feature-item"><span>📱</span> Mobile Friendly</div>
+    </div>
+  </div>
+
+  <footer>
+    © 2025 OnyxStack Labs.<br>
+    Visitor Management System • All Rights Reserved.
+  </footer>
+
+</div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">About Application</div>
+      <button class="modal-close" id="closeModalBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="info-row">
+        <div class="info-label">App Name</div>
+        <div class="info-value">OnyxStack GatePass</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Version</div>
+        <div class="info-value">1.0</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Developed By</div>
+        <div class="info-value">OnyxStack Labs</div>
+      </div>
+      <div class="info-row">
+        <div class="info-label">Support Email</div>
+        <div class="info-value"><a href="mailto:onyxstacklabs@gmail.com">onyxstacklabs@gmail.com</a></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
 
 /* ================= FIREBASE ================= */
-
 import { initializeApp }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
@@ -169,7 +373,6 @@ import {
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
 /* ================= CONFIG ================= */
-
 const firebaseConfig = {
   apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
   authDomain: "gatepass-saas.firebaseapp.com",
@@ -183,13 +386,10 @@ const VAPID_PUBLIC_KEY =
 "BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
 
 const app = initializeApp(firebaseConfig);
-
 const db = getFirestore(app);
-
 const messaging = getMessaging(app);
 
 /* ================= UI ================= */
-
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 const btn = document.getElementById("scanBtn");
@@ -197,149 +397,110 @@ const status = document.getElementById("status");
 const gateLabel = document.getElementById("gateLabel");
 const installBtn = document.getElementById("installBtn");
 
-/* ================= STATE ================= */
+/* Modal Elements */
+const modalOverlay = document.getElementById("modalOverlay");
+const openModalBtn = document.getElementById("openModalBtn");
+const closeModalBtn = document.getElementById("closeModalBtn");
 
+/* ================= STATE ================= */
 let stream = null;
 let running = false;
 let deferredPrompt = null;
 
 /* ================= HELPERS ================= */
-
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
 function setStatus(text){
   status.innerText = text;
 }
 
+/* ================= ABOUT MODAL INTERACTION ================= */
+openModalBtn.addEventListener("click", () => {
+  modalOverlay.classList.add("active");
+});
+
+closeModalBtn.addEventListener("click", () => {
+  modalOverlay.classList.remove("active");
+});
+
+// Close modal if clicked outside content area
+modalOverlay.addEventListener("click", (e) => {
+  if (e.target === modalOverlay) {
+    modalOverlay.classList.remove("active");
+  }
+});
+
 /* ================= GATE DETECTION ================= */
-
 function getGateId(){
-
   const gate = new URLSearchParams(location.search).get("gate");
-
   if(gate === "1") return "Gate 1";
   if(gate === "2") return "Gate 2";
-
   return "Unknown Gate";
 }
 
 const CURRENT_GATE = getGateId();
-
 gateLabel.innerText = CURRENT_GATE;
 
 /* ================= PUSH NOTIFICATION ENGINE ================= */
-
 async function setupPushNotifications() {
-
   if (!("Notification" in window)) return;
-
   try {
-
     const permission = await Notification.requestPermission();
-
     if (permission === "granted") {
-
       const currentToken = await getToken(messaging, {
         vapidKey: VAPID_PUBLIC_KEY
       });
-
       if (currentToken) {
-
-        console.log(
-          "Web Push Channel Active. Token:",
-          currentToken
-        );
-
+        console.log("Web Push Channel Active. Token:", currentToken);
       } else {
-
-        console.warn(
-          "No registration token available."
-        );
+        console.warn("No registration token available.");
       }
     }
-
   } catch (err) {
-
-    console.error(
-      "An error occurred while retrieving token:",
-      err
-    );
+    console.error("An error occurred while retrieving token:", err);
   }
 }
 
-window.addEventListener(
-  "DOMContentLoaded",
-  setupPushNotifications
-);
+window.addEventListener("DOMContentLoaded", setupPushNotifications);
 
 /* ================= LOCAL NOTIFICATION ================= */
-
 function triggerNotification(){
-
   setTimeout(()=>{
-
     try{
-
       if(Notification.permission === "granted"){
-
         new Notification("Gate Alert!",{
-          body:
-          `${CURRENT_GATE}: Guest entry captured successfully.`,
-          icon:
-          "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-          badge:
-          "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+          body: `${CURRENT_GATE}: Visitor registered successfully.`,
+          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
+          badge: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
           vibrate:[200,100,200],
           tag:"gate-alert",
           renotify:true
         });
-
       }
-
     }catch(err){
-
-      console.error(
-        "Notification dispatch failed:",
-        err
-      );
+      console.error("Notification dispatch failed:", err);
     }
-
   },10);
-
 }
 
 /* ================= PWA INSTALL ================= */
-
 window.addEventListener("beforeinstallprompt",(e)=>{
-
   e.preventDefault();
-
   deferredPrompt = e;
-
   installBtn.style.display = "block";
-
 });
 
 installBtn.addEventListener("click",async()=>{
-
   if(!deferredPrompt) return;
-
   deferredPrompt.prompt();
-
   await deferredPrompt.userChoice;
-
   deferredPrompt = null;
-
   installBtn.style.display = "none";
-
 });
 
 /* ================= SERVICE WORKER ================= */
-
 if("serviceWorker" in navigator){
-
   window.addEventListener("load",()=>{
-
     navigator.serviceWorker.register("./sw.js")
     .then(()=>{
       console.log("SW Registered");
@@ -347,167 +508,105 @@ if("serviceWorker" in navigator){
     .catch(err=>{
       console.error(err);
     });
-
   });
-
 }
 
 /* ================= CAMERA ================= */
-
 async function stopCam(){
-
   if(stream){
     stream.getTracks().forEach(track => track.stop());
   }
-
   stream = null;
-
   video.pause();
-
   video.srcObject = null;
-
   await wait(300);
 }
 
 async function startCam(mode){
-
   await stopCam();
-
   stream = await navigator.mediaDevices.getUserMedia({
     video:{
-      facingMode:{
-        ideal: mode
-      },
+      facingMode:{ ideal: mode },
       width:{ ideal:480 },
       height:{ ideal:640 }
     },
     audio:false
   });
-
   video.srcObject = stream;
-
   await video.play();
-
   await wait(300);
 }
 
 /* ================= IMAGE CAPTURE ================= */
-
 function capture(){
-
   const ctx = canvas.getContext("2d");
-
   const width = 240;
   const height = 320;
-
   canvas.width = width;
   canvas.height = height;
-
   ctx.drawImage(video,0,0,width,height);
-
   return canvas.toDataURL("image/jpeg",0.25);
 }
 
 /* ================= MAIN ENGINE ================= */
-
 async function scan(){
-
   if(running) return;
-
   running = true;
-
   btn.disabled = true;
 
   try{
-
     /* REAR CAMERA */
-
     setStatus("Opening rear camera...");
-
     await startCam("environment");
-
     await wait(2000);
-
     const rearSnapshot = capture();
-
     await stopCam();
-
     await wait(500);
 
     /* FRONT CAMERA */
-
     setStatus("Capturing guest face...");
-
     await startCam("user");
-
     await wait(1800);
-
     const frontSnapshot = capture();
-
     await stopCam();
 
     /* DATA */
-
     const data = {
-
       timestamp: serverTimestamp(),
-
       gateId: CURRENT_GATE,
-
-      rearSnapshot:
-      rearSnapshot.substring(0,150000),
-
-      frontSnapshot:
-      frontSnapshot.substring(0,150000),
-
+      rearSnapshot: rearSnapshot.substring(0,150000),
+      frontSnapshot: frontSnapshot.substring(0,150000),
       action:"Guest Entry",
-
       visitorType:"unknown",
-
       confidence:0,
-
       status:"new",
-
       device:"gate-device"
     };
 
     /* FIREBASE */
-
     setStatus("Uploading to database...");
-
     await addDoc(collection(db,"logs"),data);
-
     await addDoc(collection(db,"alerts"),data);
 
     /* SUCCESS */
-
     setStatus("Entry Recorded ✔");
-
     triggerNotification();
-
-    alert("Guest captured successfully");
+    alert("Visitor registered successfully");
 
   }catch(err){
-
     console.error(err);
-
     setStatus("Error uploading data ❌");
-
     alert(err.message);
-
     await stopCam();
   }
 
   running = false;
-
   btn.disabled = false;
 }
 
 /* ================= EVENT ================= */
-
 btn.addEventListener("click",scan);
 
 </script>
-
 </body>
 </html>
