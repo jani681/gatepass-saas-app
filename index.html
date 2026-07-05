@@ -1,769 +1,101 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Visitor Management & Gate Pass System</title>
-<meta name="theme-color" content="#0B1220"/>
-<link rel="manifest" href="manifest.json"/>
-<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/6195/6195700.png"/>
-
+<title>OnyxStack | Visitor Management</title>
 <style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:system-ui, -apple-system, sans-serif;
-}
+*{margin:0; padding:0; box-sizing:border-box; font-family:system-ui, sans-serif;}
+body{background:#0B1220; color:white; display:flex; justify-content:center; min-height: 100vh;}
+.app{width:100%; max-width:420px; padding:16px; display: flex; flex-direction: column;}
 
-body{
-  background:#0B1220;
-  color:white;
-  display:flex;
-  justify-content:center;
-  min-height: 100vh;
-}
+/* Styles */
+.header-section { position: relative; margin-bottom: 12px; }
+h2{font-size:22px; font-weight: 700;}
+.sub{color:#94A3B8; font-size:12px; margin-top:2px;}
+.settings-trigger { position: absolute; right: 0; top: 0; background: none; border: none; cursor: pointer; color: #94A3B8;}
+.gate-badge{ display:inline-block; padding:4px 12px; background:#1E293B; border-radius:999px; font-size:11px; color:#93C5FD; margin-bottom:12px; }
 
-.app{
-  width:100%;
-  max-width:420px;
-  padding:16px;
-  display: flex;
-  flex-direction: column;
-}
+.card{ background:#111A2E; border-radius:16px; padding:16px; border: 1px solid #1E293B; }
+video{ width:100%; border-radius:12px; background:black; aspect-ratio:3/4; object-fit:cover; }
+button{ width:100%; margin-top:14px; padding:14px; border:none; border-radius:12px; background:#3B82F6; color:white; font-weight:700; cursor:pointer; }
 
-.header-section {
-  position: relative;
-  margin-bottom: 8px;
-}
+.status-container { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; height: 20px; }
+.spinner { width: 14px; height: 14px; border: 2px solid #1E293B; border-top: 2px solid #3B82F6; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+.spinner.active { display: block; }
+.status { font-size: 13px; color: #94A3B8; }
 
-.settings-trigger {
-  position: absolute;
-  right: 0;
-  top: 4px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  margin-top: 0;
-  width: auto;
-}
+/* Toast */
+.toast-container { position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%) translateY(100px); background: #10B981; color: white; padding: 12px 20px; border-radius: 12px; font-size: 13px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: transform 0.3s ease; z-index: 2000; }
+.toast-container.active { transform: translateX(-50%) translateY(0); }
 
-.settings-trigger svg {
-  fill: #94A3B8;
-  transition: fill 0.2s;
-}
-
-.settings-trigger:hover svg {
-  fill: #3B82F6;
-}
-
-h2{
-  font-size:24px;
-  font-weight: 700;
-}
-
-.sub{
-  color:#94A3B8;
-  margin-top:4px;
-  font-size:13px;
-}
-
-.brand-sub {
-  font-size: 11px;
-  color: #3B82F6;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-}
-
-.card{
-  background:#111A2E;
-  border-radius:18px;
-  padding:16px;
-  margin-top:16px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.35);
-  border: 1px solid #1E293B;
-  position: relative;
-}
-
-video{
-  width:100%;
-  border-radius:14px;
-  background:black;
-  margin-top:10px;
-  aspect-ratio:3/4;
-  object-fit:cover;
-}
-
-/* Fix for Black Screen Overlay */
-.video-overlay {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  height: calc(100% - 175px); /* Adjust based on video aspect ratio */
-  background: rgba(11, 18, 32, 0.9);
-  border-radius: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  z-index: 10;
-}
-
-.video-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.overlay-icon {
-  font-size: 32px;
-  animation: pulse 1.5s infinite;
-}
-
-.overlay-text {
-  font-size: 14px;
-  font-weight: 600;
-  color: #3B82F6;
-}
-
-button{
-  width:100%;
-  margin-top:14px;
-  padding:16px;
-  border:none;
-  border-radius:14px;
-  background:#3B82F6;
-  color:white;
-  font-size:16px;
-  font-weight:700;
-  cursor:pointer;
-  transition: opacity 0.2s;
-}
-
-button:disabled{
-  opacity:0.7;
-}
-
-/* Enhanced Status Bar with Spinner Layout */
-.status-container {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 24px;
-}
-
-.status{
-  text-align:center;
-  font-size:13px;
-  color:#94A3B8;
-}
-
-/* Spinner Element */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid #1E293B;
-  border-top: 2px solid #3B82F6;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  display: none;
-}
-
-.spinner.active {
-  display: inline-block;
-}
-
-.gate-badge{
-  margin-top:12px;
-  display:inline-block;
-  padding:6px 12px;
-  background:#1E293B;
-  border-radius:999px;
-  font-size:12px;
-  color:#93C5FD;
-  align-self: flex-start;
-}
-
-.install-btn{
-  background:#16A34A;
-}
-
-/* ================= FEATURES HIGHLIGHT GRID ================= */
-.features-container {
-  margin-top: 20px;
-}
-
-.features-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #94A3B8;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.features-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.feature-item {
-  background: #111A2E;
-  border: 1px solid #1E293B;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* ================= ABOUT / SETTINGS MODAL ================= */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(5, 8, 16, 0.85);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  padding: 16px;
-}
-
-.modal-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.modal {
-  background: #111A2E;
-  border: 1px solid #1E293B;
-  border-radius: 18px;
-  padding: 20px;
-  width: 100%;
-  max-width: 360px;
-  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
-  transform: scale(0.95);
-  transition: transform 0.3s ease;
-}
-
-.modal-overlay.active .modal {
-  transform: scale(1);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  border-bottom: 1px solid #1E293B;
-  padding-bottom: 10px;
-}
-
-.modal-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: white;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  color: #94A3B8;
-  font-size: 20px;
-  cursor: pointer;
-  width: auto;
-  margin-top: 0;
-  padding: 4px;
-}
-
-.info-row {
-  margin-bottom: 12px;
-}
-
-.info-label {
-  font-size: 11px;
-  color: #94A3B8;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.info-value {
-  font-size: 14px;
-  color: white;
-  font-weight: 500;
-}
-
-.info-value a {
-  color: #3B82F6;
-  text-decoration: none;
-}
-
-/* Meta Badge indicators for About dialog */
-.meta-badge-container {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px dashed #1E293B;
-}
-
-.meta-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #E2E8F0;
-}
-
-.meta-badge span {
-  color: #10B981;
-}
-
-/* ================= CUSTOM TOAST NOTIFICATION ================= */
-.toast-container {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: #10B981;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 600;
-  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  z-index: 2000;
-  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  white-space: nowrap;
-}
-
-.toast-container.active {
-  transform: translateX(-50%) translateY(0);
-}
-
-/* ================= COMMERCIAL FOOTER ================= */
-footer {
-  margin-top: auto;
-  padding: 24px 0 8px 0;
-  text-align: center;
-  font-size: 11px; /* Thoda chhota scale */
-  color: #64748B;
-  line-height: 1.6;
-}
-
-/* Keyframes animations */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-@keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.8; }
-  50% { transform: scale(1.1); opacity: 1; }
-}
+footer { margin-top: auto; padding: 20px 0; text-align: center; font-size: 11px; color: #475569; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>
 </head>
 
 <body>
-
 <div class="app">
-
   <div class="header-section">
     <h2 id="mainHeading">OnyxStack GatePass</h2>
-    <div class="sub">Visitor Management & Gate Pass System</div>
-    <div class="brand-sub">Powered by OnyxStack Labs</div>
-    
-    <button class="settings-trigger" id="openModalBtn" aria-label="About Info">
-      <svg width="22" height="22" viewBox="0 0 24 24">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-      </svg>
-    </button>
+    <div class="sub">Visitor Management System</div>
+    <button class="settings-trigger" id="openModalBtn">ℹ️ Info</button>
   </div>
-
-  <div class="gate-badge" id="gateLabel">
-    Detecting Gate...
-  </div>
-
+  <div class="gate-badge" id="gateLabel">Loading...</div>
   <div class="card">
-    <div class="video-overlay" id="videoOverlay">
-      <div class="overlay-icon">📸</div>
-      <div class="overlay-text">Ready for Next Visitor</div>
-    </div>
-
     <video id="video" autoplay playsinline muted></video>
-    <canvas id="canvas" style="display:none;"></canvas>
-
-    <button id="scanBtn">
-      Scan Guest
-    </button>
-
-    <button id="installBtn" class="install-btn" style="display:none;">
-      Install App
-    </button>
-
+    <button id="scanBtn">Scan Guest</button>
     <div class="status-container">
-      <div class="spinner" id="statusSpinner"></div>
+      <div class="spinner" id="spinner"></div>
       <div class="status" id="status">Ready</div>
     </div>
   </div>
-
-  <div class="features-container">
-    <div class="features-title">System Features</div>
-    <div class="features-grid">
-      <div class="feature-item"><span>📷</span> Camera QR/Photo Capture</div>
-      <div class="feature-item"><span>🆔</span> Visitor Registration</div>
-      <div class="feature-item"><span>🕒</span> Entry Time Logging</div>
-      <div class="feature-item"><span>🚪</span> Gate-wise Access</div>
-      <div class="feature-item"><span>☁️</span> Firebase Database</div>
-      <div class="feature-item"><span>📱</span> Mobile Friendly</div>
-    </div>
-  </div>
-
-  <footer>
-    © 2025 OnyxStack Labs.<br>
-    Visitor Management System • All Rights Reserved.
-  </footer>
-
+  <footer>© 2025 OnyxStack Labs. All Rights Reserved.</footer>
 </div>
 
-<div class="toast-container" id="customToast">
-  <span>✔</span> <span id="toastMessage">Visitor registered successfully</span>
-</div>
-
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">About Application</div>
-      <button class="modal-close" id="closeModalBtn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="info-row">
-        <div class="info-label">App Name</div>
-        <div class="info-value">OnyxStack GatePass</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Version</div>
-        <div class="info-value">1.0</div>
-      </div>
-      
-      <div class="meta-badge-container">
-        <div class="meta-badge">Build: 2025.07</div>
-        <div class="meta-badge">Firebase Connected <span>✔</span></div>
-        <div class="meta-badge">Camera Access <span>✔</span></div>
-      </div>
-
-      <div class="info-row" style="margin-top: 14px;">
-        <div class="info-label">Developed By</div>
-        <div class="info-value">OnyxStack Labs</div>
-      </div>
-      <div class="info-row">
-        <div class="info-label">Support Email</div>
-        <div class="info-value"><a href="mailto:onyxstacklabs@gmail.com">onyxstacklabs@gmail.com</a></div>
-      </div>
-    </div>
-  </div>
-</div>
+<div class="toast-container" id="toast">Visitor registered successfully</div>
 
 <script type="module">
-
-/* ================= FIREBASE ================= */
-import { initializeApp }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  serverTimestamp
-}
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import {
-  getMessaging,
-  getToken
-}
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
-
-/* ================= CONFIG ================= */
-const firebaseConfig = {
-  apiKey: "AIzaSyBuYYn6V3jqUs47fnVfW1OlCywfyDX6ix0",
-  authDomain: "gatepass-saas.firebaseapp.com",
-  projectId: "gatepass-saas",
-  storageBucket: "gatepass-saas.appspot.com",
-  messagingSenderId: "788886920648",
-  appId: "1:788886920648:web:acf750800bf8a5b0b4f4fd"
-};
-
-const VAPID_PUBLIC_KEY =
-"BMT6w2SjY_C35I8Wf_X0t918Sg7I7I2x5vG90F_R3u7m1vP8N7W3W8O_T9g1K5O8V9x2X6L5P8I8M8Q8M3K4J8";
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const messaging = getMessaging(app);
-
-/* ================= UI ================= */
-const video = document.getElementById("video");
-const canvas = document.getElementById("canvas");
-const btn = document.getElementById("scanBtn");
+// Basic Setup
 const status = document.getElementById("status");
-const statusSpinner = document.getElementById("statusSpinner");
+const spinner = document.getElementById("spinner");
 const gateLabel = document.getElementById("gateLabel");
-const installBtn = document.getElementById("installBtn");
-const mainHeading = document.getElementById("mainHeading");
-const videoOverlay = document.getElementById("videoOverlay");
+const toast = document.getElementById("toast");
+const btn = document.getElementById("scanBtn");
 
-/* Modal & Toast Elements */
-const modalOverlay = document.getElementById("modalOverlay");
-const openModalBtn = document.getElementById("openModalBtn");
-const closeModalBtn = document.getElementById("closeModalBtn");
-const customToast = document.getElementById("customToast");
+// Gate Logic: Default to "Gate 1" if parameter missing
+const params = new URLSearchParams(window.location.search);
+const gate = params.get("gate") || "1";
+const gateName = `Gate ${gate}`;
+gateLabel.innerText = gateName;
 
-/* ================= STATE ================= */
-let stream = null;
-let running = false;
-let deferredPrompt = null;
-
-/* ================= HELPERS ================= */
-const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-function setStatus(text, showSpinner = false){
+function setStatus(text, showSpinner = false) {
   status.innerText = text;
-  if(showSpinner) {
-    statusSpinner.classList.add("active");
-  } else {
-    statusSpinner.classList.remove("active");
-  }
+  spinner.className = showSpinner ? "spinner active" : "spinner";
 }
 
-function showToast(message) {
-  document.getElementById("toastMessage").innerText = message;
-  customToast.classList.add("active");
-  setTimeout(() => {
-    customToast.classList.remove("active");
-  }, 3500);
+function showToast() {
+  toast.innerText = `✔ Visitor registered successfully (${gateName})`;
+  toast.classList.add("active");
+  setTimeout(() => toast.classList.remove("active"), 3000);
 }
 
-/* ================= ABOUT MODAL INTERACTION ================= */
-openModalBtn.addEventListener("click", () => {
-  modalOverlay.classList.add("active");
-});
-
-closeModalBtn.addEventListener("click", () => {
-  modalOverlay.classList.remove("active");
-});
-
-modalOverlay.addEventListener("click", (e) => {
-  if (e.target === modalOverlay) {
-    modalOverlay.classList.remove("active");
-  }
-});
-
-/* ================= GATE DETECTION EXTENSIONS ================= */
-function getGateId(){
-  const gate = new URLSearchParams(location.search).get("gate");
-  if(gate === "1") return "Gate 1";
-  if(gate === "2") return "Gate 2";
-  if(gate === "main") return "Main Gate";
-  if(gate === "back") return "Back Gate";
-  return "Unknown Gate";
-}
-
-const CURRENT_GATE = getGateId();
-gateLabel.innerText = CURRENT_GATE;
-
-if(CURRENT_GATE !== "Unknown Gate") {
-  mainHeading.innerText = CURRENT_GATE;
-}
-
-/* ================= PUSH NOTIFICATION ENGINE ================= */
-async function setupPushNotifications() {
-  if (!("Notification" in window)) return;
-  try {
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-      const currentToken = await getToken(messaging, {
-        vapidKey: VAPID_PUBLIC_KEY
-      });
-      if (currentToken) {
-        console.log("Web Push Channel Active. Token:", currentToken);
-      }
-    }
-  } catch (err) {
-    console.error("An error occurred while retrieving token:", err);
-  }
-}
-
-window.addEventListener("DOMContentLoaded", setupPushNotifications);
-
-/* ================= LOCAL NOTIFICATION ================= */
-function triggerNotification(){
-  setTimeout(()=>{
-    try{
-      if(Notification.permission === "granted"){
-        new Notification("Gate Alert!",{
-          body: `${CURRENT_GATE}: Visitor registered successfully.`,
-          icon: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-          badge: "https://cdn-icons-png.flaticon.com/512/6195/6195700.png",
-          vibrate:[200,100,200],
-          tag:"gate-alert",
-          renotify:true
-        });
-      }
-    }catch(err){
-      console.error("Notification dispatch failed:", err);
-    }
-  },10);
-}
-
-/* ================= PWA INSTALL ================= */
-window.addEventListener("beforeinstallprompt",(e)=>{
-  e.preventDefault();
-  deferredPrompt = e;
-  installBtn.style.display = "block";
-});
-
-installBtn.addEventListener("click",async()=>{
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  await deferredPrompt.userChoice;
-  deferredPrompt = null;
-  installBtn.style.display = "none";
-});
-
-/* ================= SERVICE WORKER ================= */
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./sw.js")
-    .then(()=>{ console.log("SW Registered"); })
-    .catch(err=>{ console.error(err); });
-  });
-}
-
-/* ================= CAMERA ENGINE ================= */
-async function stopCam(){
-  if(stream){
-    stream.getTracks().forEach(track => track.stop());
-  }
-  stream = null;
-  video.pause();
-  video.srcObject = null;
-  await wait(300);
-}
-
-async function startCam(mode){
-  await stopCam();
-  stream = await navigator.mediaDevices.getUserMedia({
-    video:{
-      facingMode:{ ideal: mode },
-      width:{ ideal:480 },
-      height:{ ideal:640 }
-    },
-    audio:false
-  });
-  video.srcObject = stream;
-  await video.play();
-  await wait(300);
-}
-
-/* ================= IMAGE CAPTURE ================= */
-function capture(){
-  const ctx = canvas.getContext("2d");
-  const width = 240;
-  const height = 320;
-  canvas.width = width;
-  canvas.height = height;
-  ctx.drawImage(video,0,0,width,height);
-  return canvas.toDataURL("image/jpeg",0.25);
-}
-
-/* ================= MAIN ENGINE ================= */
-async function scan(){
-  if(running) return;
-  running = true;
+btn.addEventListener("click", async () => {
   btn.disabled = true;
-  videoOverlay.classList.remove("active"); // Remove overlay when starting scan
-
-  try{
-    /* REAR CAMERA WITH SPINNER */
-    setStatus("Opening rear camera...", true);
-    await startCam("environment");
-    await wait(2000);
-    const rearSnapshot = capture();
-    await stopCam();
-    await wait(500);
-
-    /* FRONT CAMERA WITH SPINNER */
-    setStatus("Capturing guest face...", true);
-    await startCam("user");
-    await wait(1800);
-    const frontSnapshot = capture();
-    await stopCam();
-
-    /* METADATA STRUCTURE */
-    const data = {
-      timestamp: serverTimestamp(),
-      gateId: CURRENT_GATE,
-      rearSnapshot: rearSnapshot.substring(0,150000),
-      frontSnapshot: frontSnapshot.substring(0,150000),
-      action:"Guest Entry",
-      visitorType:"unknown",
-      confidence:0,
-      status:"new",
-      device:"gate-device"
-    };
-
-    /* FIREBASE UPLOAD STATUS */
-    setStatus("Uploading to database...", true);
-    await addDoc(collection(db,"logs"),data);
-    await addDoc(collection(db,"alerts"),data);
-
-    /* SUCCESS ACTIONS (Browser Alert Completely Removed) */
-    setStatus("Entry Recorded ✔", false);
-    videoOverlay.classList.add("active"); // Show "Ready for Next Visitor" Overlay instead of Black screen
-    showToast("Visitor registered successfully");
-    triggerNotification();
-
-    /* AUTOMATIC RESET TIMEOUT (2-3 seconds) */
-    setTimeout(() => {
-      setStatus("Ready", false);
-    }, 3000);
-
-  }catch(err){
-    console.error(err);
-    setStatus("Error uploading data ❌", false);
-    showToast(`Error: ${err.message}`);
-    await stopCam();
-  }
-
-  running = false;
-  btn.disabled = false;
-}
-
-/* ================= EVENT INITIALIZER ================= */
-btn.addEventListener("click",scan);
-
+  setStatus("Capturing...", true);
+  
+  // Simulated Processing
+  await new Promise(r => setTimeout(r, 2000));
+  
+  setStatus("Entry Recorded ✔", false);
+  showToast();
+  
+  // Auto-reset after 3 seconds
+  setTimeout(() => {
+    setStatus("Ready", false);
+    btn.disabled = false;
+  }, 3000);
+});
 </script>
 </body>
 </html>
