@@ -274,7 +274,7 @@ footer {
 <div class="app">
 
   <div class="header-section">
-    <h2>🚪 Gate Scanner</h2>
+    <h2 id="mainHeading">🚪 Gate Scanner</h2>
     <div class="sub">Visitor Management & Gate Pass System</div>
     <div class="brand-sub">Powered by OnyxStack Labs</div>
     
@@ -396,6 +396,7 @@ const btn = document.getElementById("scanBtn");
 const status = document.getElementById("status");
 const gateLabel = document.getElementById("gateLabel");
 const installBtn = document.getElementById("installBtn");
+const mainHeading = document.getElementById("mainHeading");
 
 /* Modal Elements */
 const modalOverlay = document.getElementById("modalOverlay");
@@ -423,14 +424,13 @@ closeModalBtn.addEventListener("click", () => {
   modalOverlay.classList.remove("active");
 });
 
-// Close modal if clicked outside content area
 modalOverlay.addEventListener("click", (e) => {
   if (e.target === modalOverlay) {
     modalOverlay.classList.remove("active");
   }
 });
 
-/* ================= GATE DETECTION ================= */
+/* ================= GATE DETECTION & DYNAMIC HEADER ================= */
 function getGateId(){
   const gate = new URLSearchParams(location.search).get("gate");
   if(gate === "1") return "Gate 1";
@@ -440,6 +440,11 @@ function getGateId(){
 
 const CURRENT_GATE = getGateId();
 gateLabel.innerText = CURRENT_GATE;
+
+// Dynamically sets a professional name on top if gate is verified
+if(CURRENT_GATE !== "Unknown Gate") {
+  mainHeading.innerText = `🚪 ${CURRENT_GATE} Scanner`;
+}
 
 /* ================= PUSH NOTIFICATION ENGINE ================= */
 async function setupPushNotifications() {
